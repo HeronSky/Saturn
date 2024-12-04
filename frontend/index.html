@@ -104,33 +104,6 @@
             }
         }
 
-        function calculateAltitude() {
-            const body = document.getElementById('body').value;
-            const latitude = document.getElementById('manual_latitude').value || document.getElementById('auto_latitude').value;
-            const longitude = document.getElementById('manual_longitude').value || document.getElementById('auto_longitude').value;
-            const time = document.getElementById('time').value;
-
-            const data = {
-                body: body,
-                latitude: latitude,
-                longitude: longitude,
-                time: time
-            };
-
-            fetch('/api/calculate', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(data)
-            })
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById('result').innerText = `天體: ${data.body}, 高度: ${data.altitude} 度`;
-            })
-            .catch(error => console.error('Error:', error));
-        }
-
         window.onload = function() {
             getLocation();
         }
@@ -143,40 +116,6 @@
             <button type="submit" name="lang" value="zh">中文</button>
         </form>
         <h1>{{ '天體高度變化圖表' if lang == 'zh' else 'Celestial Altitude Plot' }}</h1>
-        <form onsubmit="event.preventDefault(); calculateAltitude();">
-            <div class="form-group">
-                <label for="body">{{ '選擇天體:' if lang == 'zh' else 'Select Celestial Body:' }}</label>
-                <input type="text" id="body" name="body" required>
-            </div>
-
-            <div class="form-group">
-                <label for="time">{{ '輸入時間 (ISO 格式):' if lang == 'zh' else 'Enter Time (ISO format):' }}</label>
-                <input type="text" id="time" name="time" required>
-            </div>
-
-            <div class="form-group location-options">
-                <label>{{ '選擇位置方法:' if lang == 'zh' else 'Select Location Method:' }}</label>
-                <label><input type="radio" name="location_method" value="automatic" id="automatic" checked onclick="toggleLocationInput()"> {{ '使用當前位置' if lang == 'zh' else 'Use Current Location' }}</label>
-                <label><input type="radio" name="location_method" value="manual" id="manual" onclick="toggleLocationInput()"> {{ '手動輸入' if lang == 'zh' else 'Enter Manually' }}</label>
-            </div>
-
-            <div class="form-group manual-location" id="manual-location" style="display:none;">
-                <label for="manual_latitude">{{ '緯度:' if lang == 'zh' else 'Latitude:' }}</label>
-                <input type="number" step="any" id="manual_latitude" name="manual_latitude" placeholder="{{ '輸入緯度' if lang == 'zh' else 'Enter Latitude' }}">
-
-                <label for="manual_longitude">{{ '經度:' if lang == 'zh' else 'Longitude:' }}</label>
-                <input type="number" step="any" id="manual_longitude" name="manual_longitude" placeholder="{{ '輸入經度' if lang == 'zh' else 'Enter Longitude' }}">
-            </div>
-
-            <input type="hidden" id="auto_latitude" name="auto_latitude" value="">
-            <input type="hidden" id="auto_longitude" name="auto_longitude" value="">
-
-            <p id="coordinates">{{ '經度: N/A, 緯度: N/A' if lang == 'zh' else 'Longitude: N/A, Latitude: N/A' }}</p>
-
-            <button type="submit">{{ '計算高度' if lang == 'zh' else 'Calculate Altitude' }}</button>
-        </form>
-
-        <div id="result"></div>
 
         <form method="POST" action="/">
             <div class="form-group">
