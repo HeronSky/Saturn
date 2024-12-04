@@ -2,18 +2,17 @@ import matplotlib
 matplotlib.use('Agg')  # 使用非互動後端
 
 from flask import Flask, render_template, request, jsonify
+from flask_cors import CORS
 from astropy.coordinates import get_body, EarthLocation, AltAz
 from astropy.time import Time
-import astropy.units as u
-import matplotlib.pyplot as plt
-import numpy as np
-import os
+import astropy.units as u  # 確保導入 astropy.units
 from datetime import datetime, timedelta
 from timezonefinder import TimezoneFinder
-import pytz
 from apscheduler.schedulers.background import BackgroundScheduler
+import os
 
 app = Flask(__name__, template_folder='../frontend', static_folder='static')
+CORS(app)
 
 # 設定圖像上傳目錄的絕對路徑
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -81,6 +80,7 @@ def calculate():
 
 if __name__ == '__main__':
     try:
-        app.run(host='0.0.0.0', port=5000, debug=True)
+        port = int(os.environ.get('PORT', 5000))
+        app.run(host='0.0.0.0', port=port, debug=True)
     except (KeyboardInterrupt, SystemExit):
         scheduler.shutdown()
