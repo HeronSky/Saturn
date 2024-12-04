@@ -108,6 +108,34 @@
         window.onload = function() {
             getLocation();
         }
+
+        // 新增的 JavaScript 代碼
+        function calculateAltitude() {
+            const body = document.getElementById('body').value;
+            const latitude = document.getElementById('manual_latitude').value || document.getElementById('auto_latitude').value;
+            const longitude = document.getElementById('manual_longitude').value || document.getElementById('auto_longitude').value;
+            const time = document.getElementById('time').value;
+
+            const data = {
+                body: body,
+                latitude: latitude,
+                longitude: longitude,
+                time: time
+            };
+
+            fetch('https://saturn-backend.onrender.com/api/calculate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('result').innerText = `天體: ${data.body}, 高度: ${data.altitude} 度`;
+            })
+            .catch(error => console.error('Error:', error));
+        }
     </script>
 </head>
 <body>
@@ -117,25 +145,15 @@
             <button type="submit" name="lang" value="zh">中文</button>
         </form>
         <h1>{{ '天體高度變化圖表' if lang == 'zh' else 'Celestial Altitude Plot' }}</h1>
-        <form method="POST" action="/">
+        <form onsubmit="event.preventDefault(); calculateAltitude();">
             <div class="form-group">
-                <label>{{ '選擇天體:' if lang == 'zh' else 'Select Celestial Bodies:' }}</label>
-                <div class="checkbox-group">
-                    <label><input type="checkbox" name="bodies" value="mercury"> {{ '水星' if lang == 'zh' else 'Mercury' }}</label>
-                    <label><input type="checkbox" name="bodies" value="venus"> {{ '金星' if lang == 'zh' else 'Venus' }}</label>
-                    <label><input type="checkbox" name="bodies" value="mars"> {{ '火星' if lang == 'zh' else 'Mars' }}</label>
-                    <label><input type="checkbox" name="bodies" value="jupiter"> {{ '木星' if lang == 'zh' else 'Jupiter' }}</label>
-                    <label><input type="checkbox" name="bodies" value="saturn"> {{ '土星' if lang == 'zh' else 'Saturn' }}</label>
-                    <label><input type="checkbox" name="bodies" value="uranus"> {{ '天王星' if lang == 'zh' else 'Uranus' }}</label>
-                    <label><input type="checkbox" name="bodies" value="neptune"> {{ '海王星' if lang == 'zh' else 'Neptune' }}</label>
-                    <label><input type="checkbox" name="bodies" value="moon"> {{ '月亮' if lang == 'zh' else 'Moon' }}</label>
-                    <label><input type="checkbox" name="bodies" value="sun"> {{ '太陽' if lang == 'zh' else 'Sun' }}</label>
-                </div>
+                <label for="body">{{ '選擇天體:' if lang == 'zh' else 'Select Celestial Body:' }}</label>
+                <input type="text" id="body" name="body" required>
             </div>
 
             <div class="form-group">
-                <label for="hours">{{ '輸入時間範圍（小時）:' if lang == 'zh' else 'Enter Time Range (hours):' }}</label>
-                <input type="number" id="hours" name="hours" value="8" min="1" required>
+                <label for="time">{{ '輸入時間 (ISO 格式):' if lang == 'zh' else 'Enter Time (ISO format):' }}</label>
+                <input type="text" id="time" name="time" required>
             </div>
 
             <div class="form-group location-options">
@@ -158,8 +176,10 @@
 
             <p id="coordinates">{{ '經度: N/A, 緯度: N/A' if lang == 'zh' else 'Longitude: N/A, Latitude: N/A' }}</p>
 
-            <button type="submit">{{ '生成圖表' if lang == 'zh' else 'Generate Plot' }}</button>
+            <button type="submit">{{ '計算高度' if lang == 'zh' else 'Calculate Altitude' }}</button>
         </form>
+
+        <div id="result"></div>
 
         {% if error_message %}
             <div class="error">{{ error_message }}</div>
