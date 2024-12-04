@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ '天體高度變化圖表' if lang == 'zh' else 'Celestial Altitude Plot' }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+        }
+        .container {
+            max-width: 800px;
+            margin: auto;
+        }
+        .form-group {
+            margin-top: 20px;
+        }
+        .form-group label {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 5px;
+        }
+        .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+        }
+        .checkbox-group label {
+            margin-right: 15px;
+        }
+        .location-options {
+            margin-top: 20px;
+        }
+        .location-options label {
+            margin-right: 20px;
+        }
+        .manual-location {
+            display: none;
+            margin-top: 10px;
+        }
+        input, button {
+            padding: 8px;
+            margin-top: 5px;
+        }
+        button {
+            padding: 10px 20px;
+            margin-top: 20px;
+        }
+        img {
+            max-width: 100%;
+            margin-top: 20px;
+        }
+        .error {
+            color: red;
+            margin-top: 20px;
+        }
+    </style>
+    <script>
+        function getLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(setPosition, showError);
+            } else {
+                alert("您的瀏覽器不支持地理定位 API");
+            }
+        }
+
+        function setPosition(position) {
+            document.getElementById('auto_latitude').value = position.coords.latitude;
+            document.getElementById('auto_longitude').value = position.coords.longitude;
+            document.getElementById('coordinates').innerText = `經度: ${position.coords.longitude}, 緯度: ${position.coords.latitude}`;
+            console.log(`Set latitude to ${position.coords.latitude}`);
+            console.log(`Set longitude to ${position.coords.longitude}`);
+        }
+
+        function showError(error) {
+            switch(error.code) {
+                case error.PERMISSION_DENIED:
+                    alert("用戶拒絕了地理定位請求。");
+                    console.log("Geolocation permission denied.");
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    alert("位置資訊不可用。");
+                    console.log("Position unavailable.");
+                    break;
+                case error.TIMEOUT:
+                    alert("獲取位置的請求超時。");
+                    console.log("Geolocation request timed out.");
+                    break;
+                case error.UNKNOWN_ERROR:
+                    alert("發生未知錯誤。");
+                    console.log("Unknown geolocation error.");
+                    break;
+            }
+        }
+
+        function toggleLocationInput() {
+            const manualRadio = document.getElementById('manual');
+            const manualInputs = document.getElementById('manual-location');
+            if (manualRadio.checked) {
+                manualInputs.style.display = 'block';
+            } else {
+                manualInputs.style.display = 'none';
+                // 清空手動輸入欄位
+                document.getElementById('manual_latitude').value = '';
+                document.getElementById('manual_longitude').value = '';
+            }
+        }
+
+        window.onload = function() {
+            getLocation();
+        }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <form method="get" action="/">
+            <button type="submit" name="lang" value="en">English</button>
+            <button type="submit" name="lang" value="zh">中文</button>
+        </form>
+        <h1>{{ '天體高度變化圖表' if lang == 'zh' else 'Celestial Altitude Plot' }}</h1>
+        <form method="POST" action="/">
+            <div class="form-group">
+                <label>{{ '選擇天體:' if lang == 'zh' else 'Select Celestial Bodies:' }}</label>
+                <div class="checkbox-group">
+                    <label><input type="checkbox" name="bodies" value="mercury"> {{ '水星' if lang == 'zh' else 'Mercury' }}</label>
+                    <label><input type="checkbox" name="bodies" value="venus"> {{ '金星' if lang == 'zh' else 'Venus' }}</label>
+                    <label><input type="checkbox" name="bodies" value="mars"> {{ '火星' if lang == 'zh' else 'Mars' }}</label>
+                    <label><input type="checkbox" name="bodies" value="jupiter"> {{ '木星' if lang == 'zh' else 'Jupiter' }}</label>
+                    <label><input type="checkbox" name="bodies" value="saturn"> {{ '土星' if lang == 'zh' else 'Saturn' }}</label>
+                    <label><input type="checkbox" name="bodies" value="uranus"> {{ '天王星' if lang == 'zh' else 'Uranus' }}</label>
+                    <label><input type="checkbox" name="bodies" value="neptune"> {{ '海王星' if lang == 'zh' else 'Neptune' }}</label>
+                    <label><input type="checkbox" name="bodies" value="moon"> {{ '月亮' if lang == 'zh' else 'Moon' }}</label>
+                    <label><input type="checkbox" name="bodies" value="sun"> {{ '太陽' if lang == 'zh' else 'Sun' }}</label>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="hours">{{ '輸入時間範圍（小時）:' if lang == 'zh' else 'Enter Time Range (hours):' }}</label>
+                <input type="number" id="hours" name="hours" value="8" min="1" required>
+            </div>
+
+            <div class="form-group location-options">
+                <label>{{ '選擇位置方法:' if lang == 'zh' else 'Select Location Method:' }}</label>
+                <label><input type="radio" name="location_method" value="automatic" id="automatic" checked onclick="toggleLocationInput()"> {{ '使用當前位置' if lang == 'zh' else 'Use Current Location' }}</label>
+                <label><input type="radio" name="location_method" value="manual" id="manual" onclick="toggleLocationInput()"> {{ '手動輸入' if lang == 'zh' else 'Enter Manually' }}</label>
+            </div>
+
+            <div class="form-group manual-location" id="manual-location" style="display:none;">
+                <label for="manual_latitude">{{ '緯度:' if lang == 'zh' else 'Latitude:' }}</label>
+                <input type="number" step="any" id="manual_latitude" name="manual_latitude" placeholder="{{ '輸入緯度' if lang == 'zh' else 'Enter Latitude' }}">
+
+                <label for="manual_longitude">{{ '經度:' if lang == 'zh' else 'Longitude:' }}</label>
+                <input type="number" step="any" id="manual_longitude" name="manual_longitude" placeholder="{{ '輸入經度' if lang == 'zh' else 'Enter Longitude' }}">
+            </div>
+
+            <!-- 自動位置的隱藏欄位 -->
+            <input type="hidden" id="auto_latitude" name="auto_latitude" value="">
+            <input type="hidden" id="auto_longitude" name="auto_longitude" value="">
+
+            <p id="coordinates">{{ '經度: N/A, 緯度: N/A' if lang == 'zh' else 'Longitude: N/A, Latitude: N/A' }}</p>
+
+            <button type="submit">{{ '生成圖表' if lang == 'zh' else 'Generate Plot' }}</button>
+        </form>
+
+        {% if error_message %}
+            <div class="error">{{ error_message }}</div>
+        {% endif %}
+
+        {% if image_url %}
+            <h2>{{ '生成的圖表:' if lang == 'zh' else 'Generated Plot:' }}</h2>
+            <img src="{{ image_url }}" alt="{{ '天體高度變化圖表' if lang == 'zh' else 'Celestial Altitude Plot' }}">
+            <a href="{{ image_url }}" download="altitude_plot.png">
+                <button>{{ '下載圖表' if lang == 'zh' else 'Download Plot' }}</button>
+            </a>
+        {% endif %}
+    </div>
+</body>
+</html>
