@@ -5,3 +5,4 @@ numpy
 timezonefinder
 pytz
 APScheduler
+flask-corspip 

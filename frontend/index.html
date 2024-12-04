@@ -99,7 +99,6 @@
                 manualInputs.style.display = 'block';
             } else {
                 manualInputs.style.display = 'none';
-                // 清空手動輸入欄位
                 document.getElementById('manual_latitude').value = '';
                 document.getElementById('manual_longitude').value = '';
             }
@@ -109,7 +108,6 @@
             getLocation();
         }
 
-        // 新增的 JavaScript 代碼
         function calculateAltitude() {
             const body = document.getElementById('body').value;
             const latitude = document.getElementById('manual_latitude').value || document.getElementById('auto_latitude').value;
@@ -170,7 +168,6 @@
                 <input type="number" step="any" id="manual_longitude" name="manual_longitude" placeholder="{{ '輸入經度' if lang == 'zh' else 'Enter Longitude' }}">
             </div>
 
-            <!-- 自動位置的隱藏欄位 -->
             <input type="hidden" id="auto_latitude" name="auto_latitude" value="">
             <input type="hidden" id="auto_longitude" name="auto_longitude" value="">
 
