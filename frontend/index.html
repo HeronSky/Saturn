@@ -104,10 +104,6 @@
             }
         }
 
-        window.onload = function() {
-            getLocation();
-        }
-
         function calculateAltitude() {
             const body = document.getElementById('body').value;
             const latitude = document.getElementById('manual_latitude').value || document.getElementById('auto_latitude').value;
@@ -121,7 +117,7 @@
                 time: time
             };
 
-            fetch('https://saturn-huk9.onrender.com/api/calculate', {
+            fetch('/api/calculate', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -133,6 +129,10 @@
                 document.getElementById('result').innerText = `天體: ${data.body}, 高度: ${data.altitude} 度`;
             })
             .catch(error => console.error('Error:', error));
+        }
+
+        window.onload = function() {
+            getLocation();
         }
     </script>
 </head>
@@ -177,6 +177,49 @@
         </form>
 
         <div id="result"></div>
+
+        <form method="POST" action="/">
+            <div class="form-group">
+                <label>{{ '選擇天體:' if lang == 'zh' else 'Select Celestial Bodies:' }}</label>
+                <div class="checkbox-group">
+                    <label><input type="checkbox" name="bodies" value="mercury"> {{ '水星' if lang == 'zh' else 'Mercury' }}</label>
+                    <label><input type="checkbox" name="bodies" value="venus"> {{ '金星' if lang == 'zh' else 'Venus' }}</label>
+                    <label><input type="checkbox" name="bodies" value="mars"> {{ '火星' if lang == 'zh' else 'Mars' }}</label>
+                    <label><input type="checkbox" name="bodies" value="jupiter"> {{ '木星' if lang == 'zh' else 'Jupiter' }}</label>
+                    <label><input type="checkbox" name="bodies" value="saturn"> {{ '土星' if lang == 'zh' else 'Saturn' }}</label>
+                    <label><input type="checkbox" name="bodies" value="uranus"> {{ '天王星' if lang == 'zh' else 'Uranus' }}</label>
+                    <label><input type="checkbox" name="bodies" value="neptune"> {{ '海王星' if lang == 'zh' else 'Neptune' }}</label>
+                    <label><input type="checkbox" name="bodies" value="moon"> {{ '月亮' if lang == 'zh' else 'Moon' }}</label>
+                    <label><input type="checkbox" name="bodies" value="sun"> {{ '太陽' if lang == 'zh' else 'Sun' }}</label>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="hours">{{ '輸入時間範圍（小時）:' if lang == 'zh' else 'Enter Time Range (hours):' }}</label>
+                <input type="number" id="hours" name="hours" value="8" min="1" required>
+            </div>
+
+            <div class="form-group location-options">
+                <label>{{ '選擇位置方法:' if lang == 'zh' else 'Select Location Method:' }}</label>
+                <label><input type="radio" name="location_method" value="automatic" id="automatic" checked onclick="toggleLocationInput()"> {{ '使用當前位置' if lang == 'zh' else 'Use Current Location' }}</label>
+                <label><input type="radio" name="location_method" value="manual" id="manual" onclick="toggleLocationInput()"> {{ '手動輸入' if lang == 'zh' else 'Enter Manually' }}</label>
+            </div>
+
+            <div class="form-group manual-location" id="manual-location" style="display:none;">
+                <label for="manual_latitude">{{ '緯度:' if lang == 'zh' else 'Latitude:' }}</label>
+                <input type="number" step="any" id="manual_latitude" name="manual_latitude" placeholder="{{ '輸入緯度' if lang == 'zh' else 'Enter Latitude' }}">
+
+                <label for="manual_longitude">{{ '經度:' if lang == 'zh' else 'Longitude:' }}</label>
+                <input type="number" step="any" id="manual_longitude" name="manual_longitude" placeholder="{{ '輸入經度' if lang == 'zh' else 'Enter Longitude' }}">
+            </div>
+
+            <input type="hidden" id="auto_latitude" name="auto_latitude" value="">
+            <input type="hidden" id="auto_longitude" name="auto_longitude" value="">
+
+            <p id="coordinates">{{ '經度: N/A, 緯度: N/A' if lang == 'zh' else 'Longitude: N/A, Latitude: N/A' }}</p>
+
+            <button type="submit">{{ '生成圖表' if lang == 'zh' else 'Generate Plot' }}</button>
+        </form>
 
         {% if error_message %}
             <div class="error">{{ error_message }}</div>
