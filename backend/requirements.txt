@@ -1,3 +1,4 @@
+flask_cors
 Flask
 matplotlib
 astropy
@@ -5,4 +6,3 @@ numpy
 timezonefinder
 pytz
 APScheduler
-flask-corspip 
