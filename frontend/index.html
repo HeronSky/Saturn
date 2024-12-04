@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="{{ lang }}">
+<html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <title>{{ '天體高度變化圖表' if lang == 'zh' else 'Celestial Altitude Plot' }}</title>
+    <title>天體高度變化圖表</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -53,8 +53,15 @@
             color: red;
             margin-top: 20px;
         }
+        #loading {
+            display: none;
+            font-size: 16px;
+            color: blue;
+        }
     </style>
     <script>
+        const API_URL = "https://saturn-huk9.onrender.com";
+
         function getLocation() {
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(setPosition, showError);
@@ -67,29 +74,25 @@
             document.getElementById('auto_latitude').value = position.coords.latitude;
             document.getElementById('auto_longitude').value = position.coords.longitude;
             document.getElementById('coordinates').innerText = `經度: ${position.coords.longitude}, 緯度: ${position.coords.latitude}`;
-            console.log(`Set latitude to ${position.coords.latitude}`);
-            console.log(`Set longitude to ${position.coords.longitude}`);
         }
 
         function showError(error) {
-            switch(error.code) {
+            let message = "";
+            switch (error.code) {
                 case error.PERMISSION_DENIED:
-                    alert("用戶拒絕了地理定位請求。");
-                    console.log("Geolocation permission denied.");
+                    message = "用戶拒絕了地理定位請求。";
                     break;
                 case error.POSITION_UNAVAILABLE:
-                    alert("位置資訊不可用。");
-                    console.log("Position unavailable.");
+                    message = "位置資訊不可用。";
                     break;
                 case error.TIMEOUT:
-                    alert("獲取位置的請求超時。");
-                    console.log("Geolocation request timed out.");
+                    message = "獲取位置的請求超時。";
                     break;
                 case error.UNKNOWN_ERROR:
-                    alert("發生未知錯誤。");
-                    console.log("Unknown geolocation error.");
+                    message = "發生未知錯誤。";
                     break;
             }
+            alert(message);
         }
 
         function toggleLocationInput() {
@@ -104,73 +107,126 @@
             }
         }
 
+        async function submitForm(event) {
+            event.preventDefault();
+
+            const loading = document.getElementById("loading");
+            const resultContainer = document.getElementById("result");
+            const errorContainer = document.getElementById("error");
+            loading.style.display = "block";
+            resultContainer.innerHTML = "";
+            errorContainer.innerHTML = "";
+
+            const formData = new FormData(event.target);
+            const data = {
+                bodies: formData.getAll("bodies"),
+                hours: formData.get("hours"),
+                latitude: formData.get("manual_latitude") || formData.get("auto_latitude"),
+                longitude: formData.get("manual_longitude") || formData.get("auto_longitude"),
+            };
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                if (!response.ok) {
+                    throw new Error("API 請求失敗，請檢查輸入或稍後再試。");
+                }
+
+                const result = await response.json();
+                if (result.image_url) {
+                    resultContainer.innerHTML = `
+                        <h2>生成的圖表:</h2>
+                        <img src="${result.image_url}" alt="天體高度變化圖表">
+                        <a href="${result.image_url}" download="altitude_plot.png">
+                            <button>下載圖表</button>
+                        </a>
+                    `;
+                } else {
+                    throw new Error("未能獲取圖表結果。");
+                }
+            } catch (error) {
+                errorContainer.innerText = error.message;
+            } finally {
+                loading.style.display = "none";
+            }
+        }
+
         window.onload = function() {
             getLocation();
+        };
+
+        function toggleLanguage() {
+            const currentLanguage = document.documentElement.lang;
+            const elementsToTranslate = document.querySelectorAll('[data-zh], [data-en]');
+            if (currentLanguage === 'zh') {
+                document.documentElement.lang = 'en';
+                document.getElementById('language-toggle').innerText = '切換到中文';
+                elementsToTranslate.forEach(el => {
+                    el.innerText = el.getAttribute('data-en');
+                });
+            } else {
+                document.documentElement.lang = 'zh';
+                document.getElementById('language-toggle').innerText = 'Switch to English';
+                elementsToTranslate.forEach(el => {
+                    el.innerText = el.getAttribute('data-zh');
+                });
+            }
         }
     </script>
 </head>
 <body>
     <div class="container">
-        <form method="get" action="/">
-            <button type="submit" name="lang" value="en">English</button>
-            <button type="submit" name="lang" value="zh">中文</button>
-        </form>
-        <h1>{{ '天體高度變化圖表' if lang == 'zh' else 'Celestial Altitude Plot' }}</h1>
-
-        <form method="POST" action="/">
+        <button id="language-toggle" onclick="toggleLanguage()">Switch to English</button>
+        <h1 data-zh="天體高度變化圖表" data-en="Celestial Altitude Chart">天體高度變化圖表</h1>
+        <form id="celestialForm" onsubmit="submitForm(event)">
             <div class="form-group">
-                <label>{{ '選擇天體:' if lang == 'zh' else 'Select Celestial Bodies:' }}</label>
+                <label data-zh="選擇天體:" data-en="Select Celestial Bodies:">選擇天體:</label>
                 <div class="checkbox-group">
-                    <label><input type="checkbox" name="bodies" value="mercury"> {{ '水星' if lang == 'zh' else 'Mercury' }}</label>
-                    <label><input type="checkbox" name="bodies" value="venus"> {{ '金星' if lang == 'zh' else 'Venus' }}</label>
-                    <label><input type="checkbox" name="bodies" value="mars"> {{ '火星' if lang == 'zh' else 'Mars' }}</label>
-                    <label><input type="checkbox" name="bodies" value="jupiter"> {{ '木星' if lang == 'zh' else 'Jupiter' }}</label>
-                    <label><input type="checkbox" name="bodies" value="saturn"> {{ '土星' if lang == 'zh' else 'Saturn' }}</label>
-                    <label><input type="checkbox" name="bodies" value="uranus"> {{ '天王星' if lang == 'zh' else 'Uranus' }}</label>
-                    <label><input type="checkbox" name="bodies" value="neptune"> {{ '海王星' if lang == 'zh' else 'Neptune' }}</label>
-                    <label><input type="checkbox" name="bodies" value="moon"> {{ '月亮' if lang == 'zh' else 'Moon' }}</label>
-                    <label><input type="checkbox" name="bodies" value="sun"> {{ '太陽' if lang == 'zh' else 'Sun' }}</label>
+                    <label><input type="checkbox" name="bodies" value="mercury"> <span data-zh="水星" data-en="Mercury">水星</span></label>
+                    <label><input type="checkbox" name="bodies" value="venus"> <span data-zh="金星" data-en="Venus">金星</span></label>
+                    <label><input type="checkbox" name="bodies" value="mars"> <span data-zh="火星" data-en="Mars">火星</span></label>
+                    <label><input type="checkbox" name="bodies" value="jupiter"> <span data-zh="木星" data-en="Jupiter">木星</span></label>
+                    <label><input type="checkbox" name="bodies" value="saturn"> <span data-zh="土星" data-en="Saturn">土星</span></label>
+                    <label><input type="checkbox" name="bodies" value="uranus"> <span data-zh="天王星" data-en="Uranus">天王星</span></label>
+                    <label><input type="checkbox" name="bodies" value="neptune"> <span data-zh="海王星" data-en="Neptune">海王星</span></label>
+                    <label><input type="checkbox" name="bodies" value="moon"> <span data-zh="月亮" data-en="Moon">月亮</span></label>
+                    <label><input type="checkbox" name="bodies" value="sun"> <span data-zh="太陽" data-en="Sun">太陽</span></label>
                 </div>
             </div>
 
             <div class="form-group">
-                <label for="hours">{{ '輸入時間範圍（小時）:' if lang == 'zh' else 'Enter Time Range (hours):' }}</label>
+                <label for="hours" data-zh="輸入時間範圍（小時）:" data-en="Enter Time Range (hours):">輸入時間範圍（小時）:</label>
                 <input type="number" id="hours" name="hours" value="8" min="1" required>
             </div>
 
             <div class="form-group location-options">
-                <label>{{ '選擇位置方法:' if lang == 'zh' else 'Select Location Method:' }}</label>
-                <label><input type="radio" name="location_method" value="automatic" id="automatic" checked onclick="toggleLocationInput()"> {{ '使用當前位置' if lang == 'zh' else 'Use Current Location' }}</label>
-                <label><input type="radio" name="location_method" value="manual" id="manual" onclick="toggleLocationInput()"> {{ '手動輸入' if lang == 'zh' else 'Enter Manually' }}</label>
+                <label data-zh="選擇位置方法:" data-en="Select Location Method:">選擇位置方法:</label>
+                <label><input type="radio" name="location_method" value="automatic" id="automatic" checked onclick="toggleLocationInput()"> <span data-zh="使用當前位置" data-en="Use Current Location">使用當前位置</span></label>
+                <label><input type="radio" name="location_method" value="manual" id="manual" onclick="toggleLocationInput()"> <span data-zh="手動輸入" data-en="Enter Manually">手動輸入</span></label>
             </div>
 
             <div class="form-group manual-location" id="manual-location" style="display:none;">
-                <label for="manual_latitude">{{ '緯度:' if lang == 'zh' else 'Latitude:' }}</label>
-                <input type="number" step="any" id="manual_latitude" name="manual_latitude" placeholder="{{ '輸入緯度' if lang == 'zh' else 'Enter Latitude' }}">
-
-                <label for="manual_longitude">{{ '經度:' if lang == 'zh' else 'Longitude:' }}</label>
-                <input type="number" step="any" id="manual_longitude" name="manual_longitude" placeholder="{{ '輸入經度' if lang == 'zh' else 'Enter Longitude' }}">
+                <label for="manual_latitude" data-zh="緯度:" data-en="Latitude:">緯度:</label>
+                <input type="number" step="any" id="manual_latitude" name="manual_latitude" placeholder="輸入緯度">
+                <label for="manual_longitude" data-zh="經度:" data-en="Longitude:">經度:</label>
+                <input type="number" step="any" id="manual_longitude" name="manual_longitude" placeholder="輸入經度">
             </div>
 
             <input type="hidden" id="auto_latitude" name="auto_latitude" value="">
             <input type="hidden" id="auto_longitude" name="auto_longitude" value="">
-
-            <p id="coordinates">{{ '經度: N/A, 緯度: N/A' if lang == 'zh' else 'Longitude: N/A, Latitude: N/A' }}</p>
-
-            <button type="submit">{{ '生成圖表' if lang == 'zh' else 'Generate Plot' }}</button>
+            <p id="coordinates" data-zh="經度: N/A, 緯度: N/A" data-en="Longitude: N/A, Latitude: N/A">經度: N/A, 緯度: N/A</p>
+            <button type="submit" data-zh="生成圖表" data-en="Generate Chart">生成圖表</button>
         </form>
 
-        {% if error_message %}
-            <div class="error">{{ error_message }}</div>
-        {% endif %}
-
-        {% if image_url %}
-            <h2>{{ '生成的圖表:' if lang == 'zh' else 'Generated Plot:' }}</h2>
-            <img src="{{ image_url }}" alt="{{ '天體高度變化圖表' if lang == 'zh' else 'Celestial Altitude Plot' }}">
-            <a href="{{ image_url }}" download="altitude_plot.png">
-                <button>{{ '下載圖表' if lang == 'zh' else 'Download Plot' }}</button>
-            </a>
-        {% endif %}
+        <div id="loading" data-zh="正在生成圖表，請稍候..." data-en="Generating chart, please wait...">正在生成圖表，請稍候...</div>
+        <div id="error" class="error"></div>
+        <div id="result"></div>
     </div>
 </body>
 </html>
