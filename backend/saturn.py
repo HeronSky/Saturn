@@ -27,10 +27,10 @@ def validate_location(latitude, longitude):
         lon = float(longitude)
 
         if not (-90 <= lat <= 90):
-            raise ValueError("緯度必須介於 -90 至 90 之間")
+            raise ValueError("Latitude must be between -90 and 90 degrees")
 
         if not (-180 <= lon <= 180):
-            raise ValueError("經度必須介於 -180 至 180 之間")
+            raise ValueError("Longitude must be between -180 and 180 degrees")
 
         return lat, lon, None
     except (ValueError, TypeError) as e:
@@ -59,9 +59,9 @@ def generate_altitude_plot(selected_bodies, latitude, longitude, hours):
                 results[body_name] = f"Error: {str(e)}"
 
         plt.axhline(0, color='black', linewidth=2)
-        plt.xlabel('UTC 時間')
-        plt.ylabel('高度（度）')
-        plt.title(f'接下來 {hours} 小時內天體高度變化（UTC 時間）')
+        plt.xlabel('UTC Time')
+        plt.ylabel('Altitude (degrees)')
+        plt.title(f'Altitude Changes of Celestial Bodies Over the Next {hours} Hours (UTC Time)')
         plt.legend()
         plt.grid(True)
         plt.xticks(rotation=45)
@@ -97,14 +97,14 @@ def generate_chart():
         if not selected_bodies:
             return jsonify({
                 'status': 'error',
-                'message': '請至少選擇一個天體'
+                'message': 'Please select at least one celestial body'
             }), 400
 
         invalid_bodies = set(selected_bodies) - set(SUPPORTED_BODIES)
         if invalid_bodies:
             return jsonify({
                 'status': 'error',
-                'message': f"不支援的天體：{', '.join(invalid_bodies)}"
+                'message': f"Unsupported celestial bodies: {', '.join(invalid_bodies)}"
             }), 400
 
         lat, lon, loc_error = validate_location(latitude, longitude)
