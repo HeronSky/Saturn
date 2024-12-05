@@ -1,196 +1,108 @@
 import matplotlib
 matplotlib.use('Agg')
-
-from flask import Flask, render_template, request, send_from_directory, url_for, redirect, jsonify
-from astropy.coordinates import get_body, EarthLocation, AltAz
+from flask import Flask, request, send_from_directory, jsonify
+from flask_cors import CORS
+from astropy.coordinates import get_body, get_sun, get_moon, EarthLocation, AltAz
 from astropy.time import Time
 import astropy.units as u
 import matplotlib.pyplot as plt
 import numpy as np
 import os
-from datetime import datetime
-from timezonefinder import TimezoneFinder
-import pytz
+from datetime import datetime, timedelta
+import uuid
 
 app = Flask(__name__)
+CORS(app)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_FOLDER = os.path.join(BASE_DIR, 'static')
-
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-tf = TimezoneFinder()
 
-LANGUAGES = {
-    'en': 'English',
-    'zh': '中文'
-}
+def cleanup_old_files(max_age_hours=24):
+    current_time = datetime.now()
+    for filename in os.listdir(UPLOAD_FOLDER):
+        filepath = os.path.join(UPLOAD_FOLDER, filename)
+        if os.path.isfile(filepath):
+            file_time = datetime.fromtimestamp(os.path.getctime(filepath))
+            if (current_time - file_time) > timedelta(hours=max_age_hours):
+                try:
+                    os.remove(filepath)
+                except Exception as e:
+                    print(f"清理檔案失敗 {filepath}: {e}")
 
-# 新增支持的天體列表
-SUPPORTED_BODIES = [
-    'mercury', 'venus', 'mars', 'jupiter', 
-    'saturn', 'uranus', 'neptune', 'moon', 'sun'
-]
-
-def get_locale():
-    return request.args.get('lang', 'en')
-
-@app.route('/change_language/<language>')
-def change_language(language):
-    if language not in LANGUAGES:
-        language = 'en'
-    return redirect(url_for('index', lang=language))
-
-def validate_location(latitude, longitude, lang):
-    """驗證地理位置座標"""
+@app.route('/', methods=['POST'])
+def generate_chart():
     try:
-        lat = float(latitude)
-        lon = float(longitude)
-        
-        if not (-90 <= lat <= 90):
-            raise ValueError("緯度必須介於 -90 至 90 之間。" if lang == 'zh' else "Latitude must be between -90 and 90.")
-        
-        if not (-180 <= lon <= 180):
-            raise ValueError("經度必須介於 -180 至 180 之間。" if lang == 'zh' else "Longitude must be between -180 and 180.")
-        
-        return lat, lon
-    except (ValueError, TypeError) as e:
-        return None, str(e)
+        data = request.get_json()
+        selected_bodies = data.get('bodies', [])
+        latitude = float(data.get('latitude'))
+        longitude = float(data.get('longitude'))
+        hours = float(data.get('hours'))
+        lang = data.get('lang', 'zh')
 
-def generate_altitude_plot(selected_bodies, latitude, longitude, hours, lang):
-    """生成高度變化圖表"""
-    t = Time.now()
-    location = EarthLocation(lat=latitude*u.deg, lon=longitude*u.deg, height=0*u.m)
-    times = t + np.linspace(0, hours, 100) * u.hour
+        # 驗證輸入
+        if not selected_bodies:
+            raise ValueError("請至少選擇一個天體" if lang == 'zh' else "Please select at least one celestial body")
+        if not -90 <= latitude <= 90:
+            raise ValueError("緯度必須在 -90 到 90 度之間" if lang == 'zh' else "Latitude must be between -90 and 90 degrees")
+        if not -180 <= longitude <= 180:
+            raise ValueError("經度必須在 -180 到 180 度之間" if lang == 'zh' else "Longitude must be between -180 and 180 degrees")
+        if hours <= 0 or hours > 24:
+            raise ValueError("時間範圍必須在 0-24 小時之間" if lang == 'zh' else "Time range must be between 0-24 hours")
 
-    plt.figure(figsize=(12, 7))
-    error_occurred = False
-    error_message = None
+        # 清理舊檔案
+        cleanup_old_files()
 
-    for body_name in selected_bodies:
-        try:
-            altazs = get_body(body_name, times, location).transform_to(AltAz(obstime=times, location=location))
-            alts = altazs.alt.degree
-            utc_datetimes = times.datetime
-            plt.plot(utc_datetimes, alts, label=body_name.capitalize())
-        except Exception as e:
-            error_message = f"處理天體 {body_name} 時出錯。" if lang == 'zh' else f"Error processing celestial body {body_name}."
-            error_occurred = True
+        # 設定觀測位置
+        location = EarthLocation(lat=latitude*u.deg, lon=longitude*u.deg)
+        now = Time.now()
+        times = Time([now + timedelta(hours=h) for h in np.linspace(0, float(hours), 100)])
+        frame = AltAz(obstime=times, location=location)
 
-    if not error_occurred:
-        plt.xlabel('UTC 時間' if lang == 'zh' else 'UTC Time')
-        plt.ylabel('高度（度）' if lang == 'zh' else 'Altitude (degrees)')
-        plt.title(f'接下來 {hours} 小時內天體高度變化（UTC 時間）' if lang == 'zh' else f'Celestial Altitude Changes Over the Next {hours} Hours (UTC Time)')
-        plt.legend()
+        # 繪製圖表
+        plt.figure(figsize=(12, 8))
+        for body in selected_bodies:
+            if body == 'sun':
+                altaz = get_sun(times).transform_to(frame)
+                label = '太陽' if lang == 'zh' else 'Sun'
+            elif body == 'moon':
+                altaz = get_moon(times).transform_to(frame)
+                label = '月亮' if lang == 'zh' else 'Moon'
+            else:
+                altaz = get_body(body, times).transform_to(frame)
+                label = body.capitalize()
+            plt.plot(times.datetime, altaz.alt.degree, label=label)
+
+        # 設定圖表樣式
         plt.grid(True)
+        plt.legend()
+        plt.xlabel('時間' if lang == 'zh' else 'Time')
+        plt.ylabel('高度 (度)' if lang == 'zh' else 'Altitude (degrees)')
+        plt.title('天體高度變化圖' if lang == 'zh' else 'Celestial Bodies Altitude Chart')
         plt.xticks(rotation=45)
-        plt.tight_layout()
 
-        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-        image_filename = f'altitude_plot_{timestamp}.png'
-        save_path = os.path.join(app.config['UPLOAD_FOLDER'], image_filename)
-        
-        try:
-            plt.savefig(save_path)
-            plt.close()
-            return image_filename, None
-        except Exception as e:
-            error_message = "保存圖像時出錯。" if lang == 'zh' else "Error saving image."
-    else:
+        # 儲存圖片
+        filename = f'altitude_plot_{uuid.uuid4()}.png'
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        plt.savefig(filepath, bbox_inches='tight')
         plt.close()
 
-    return None, error_message
+        return jsonify({
+            'image_url': f"/static/{filename}",
+            'success': True
+        })
 
-@app.route('/', methods=['GET', 'POST'])
-def index():
-    lang = get_locale()
-    image_filename = None
-    error_message = None
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
 
-    if request.method == 'POST':
-  
-        selected_bodies = request.form.getlist('bodies')
-        hours = request.form.get('hours', 8)
-        location_method = request.form.get('location_method', 'automatic')
-
-
-        if not selected_bodies:
-            error_message = "請至少選擇一個天體。" if lang == 'zh' else "Please select at least one celestial body."
-            return render_template('index.html', error_message=error_message, lang=lang)
-
-        invalid_bodies = set(selected_bodies) - set(SUPPORTED_BODIES)
-        if invalid_bodies:
-            error_message = f"不支持的天體：{', '.join(invalid_bodies)}"
-            return render_template('index.html', error_message=error_message, lang=lang)
-
-      
-        try:
-            hours = float(hours)
-            if hours <= 0 or hours > 24:
-                raise ValueError("時間範圍必須在 0-24 小時之間。")
-        except ValueError:
-            error_message = "請輸入有效的時間範圍（1-24小時）。" if lang == 'zh' else "Please enter a valid time range (1-24 hours)."
-            return render_template('index.html', error_message=error_message, lang=lang)
-
-
-        if location_method == 'manual':
-            latitude = request.form.get('manual_latitude')
-            longitude = request.form.get('manual_longitude')
-        else:
-            latitude = request.form.get('auto_latitude')
-            longitude = request.form.get('auto_longitude')
-
-        
-        latitude, longitude = validate_location(latitude, longitude, lang)
-        if not latitude or not longitude:
-            error_message = longitude  # longitude 在這裡實際上是錯誤消息
-            return render_template('index.html', error_message=error_message, lang=lang)
-
-
-        try:
-            timezone_str = tf.timezone_at(lng=longitude, lat=latitude)
-            if timezone_str is None:
-                raise ValueError("無法確定時區。" if lang == 'zh' else "Cannot determine timezone.")
-            local_timezone = pytz.timezone(timezone_str)
-        except Exception as e:
-            error_message = f"時區確定錯誤：{e}" if lang == 'zh' else f"Timezone determination error: {e}"
-            return render_template('index.html', error_message=error_message, lang=lang)
-
-        # 生成圖表
-        image_filename, plot_error = generate_altitude_plot(
-            selected_bodies, 
-            latitude, 
-            longitude, 
-            hours, 
-            lang
-        )
-
-        if plot_error:
-            error_message = plot_error
-
- 
-    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-    image_filename = f'altitude_plot_{timestamp}.png'
-
-  
-    app.config['UPLOAD_FOLDER'] = 'static'
-
-  
-    if image_filename:
-        image_url = url_for('static', filename=image_filename)
-    else:
-        image_url = None
-
-    return render_template('index.html',
-                          image_url=image_url,
-                          error_message=error_message,
-                          lang=lang)
-
-@app.route('/download/<filename>')
-def download_file(filename):
-    return send_from_directory(app.config['UPLOAD_FOLDER'], filename, as_attachment=True)
+@app.route('/static/<filename>')
+def serve_file(filename):
+    if not filename.endswith('.png'):
+        return "不允許的檔案類型", 400
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
