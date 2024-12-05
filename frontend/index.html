@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>天體高度變化圖表</title>
+    <title>Saturn 行星高度變化圖表</title>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <style>
         body {
@@ -46,19 +46,32 @@
         .language-toggle button {
             margin-left: 5px;
         }
+        .github-link {
+            margin-bottom: 20px;
+            text-align: center;
+        }
     </style>
+    <meta property="og:title" content="Saturn 行星高度變化圖表">
+    <meta property="og:description" content="生成並顯示行星高度變化圖表">
+    <meta property="og:image" content="https://yourwebsite.com/path/to/your/image.jpg">
+    <meta property="og:url" content="https://yourwebsite.com">
+    <meta property="og:type" content="website">
 </head>
 <body>
+    <div class="github-link">
+        <a href="https://github.com/HeronSky/Saturn" target="_blank" data-zh="GitHub 專案" data-en="GitHub Project">GitHub 專案</a>
+    </div>
+
     <div class="language-toggle">
         <button onclick="changeLanguage('zh')">中文</button>
         <button onclick="changeLanguage('en')">English</button>
     </div>
 
     <div class="container">
-        <h1 data-zh="天體高度變化圖表" data-en="Celestial Body Altitude Chart">天體高度變化圖表</h1>
+        <h1 data-zh="Saturn 行星高度變化圖表" data-en="Saturn Planet Altitude Chart">Saturn 行星高度變化圖表</h1>
 
         <div class="form-group">
-            <label data-zh="選擇天體:" data-en="Select Celestial Bodies:">選擇天體:</label>
+            <label data-zh="選擇天體:" data-en="Select Planets:">選擇天體:</label>
             <div class="checkbox-group">
                 <label><input type="checkbox" name="body" value="mercury" data-zh="水星" data-en="Mercury"> <span data-zh="水星" data-en="Mercury">水星</span></label>
                 <label><input type="checkbox" name="body" value="venus" data-zh="金星" data-en="Venus"> <span data-zh="金星" data-en="Venus">金星</span></label>
@@ -95,12 +108,10 @@
     </div>
 
     <script>
-        // 預設語言為中文
         let currentLanguage = 'zh';
 
         function changeLanguage(lang) {
             currentLanguage = lang;
-            // 更新所有帶有 data-zh 和 data-en 屬性的元素
             document.querySelectorAll('[data-zh][data-en]').forEach(el => {
                 el.textContent = el.getAttribute(`data-${lang}`);
             });
@@ -165,7 +176,7 @@
 
             if (selectedBodies.length === 0) {
                 loadingEl.style.display = 'none';
-                showError(currentLanguage === 'zh' ? '請至少選擇一個天體' : 'Please select at least one celestial body');
+                showError(currentLanguage === 'zh' ? '請至少選擇一個天體' : 'Please select at least one planet');
                 return;
             }
 
@@ -186,7 +197,7 @@
                 if (response.data.status === 'success') {
                     const img = document.createElement('img');
                     img.src = 'data:image/png;base64,' + response.data.image_base64;
-                    img.alt = currentLanguage === 'zh' ? '天體高度變化圖表' : 'Celestial Body Altitude Chart';
+                    img.alt = currentLanguage === 'zh' ? '天體高度變化圖表' : 'Planet Altitude Chart';
                     resultEl.innerHTML = '';
                     resultEl.appendChild(img);
                 } else {
@@ -199,7 +210,6 @@
             });
         }
 
-        // 頁面載入時檢查是否支持定位
         window.onload = function() {
             const locationBtn = document.getElementById('location-btn');
             if (!navigator.geolocation) {
