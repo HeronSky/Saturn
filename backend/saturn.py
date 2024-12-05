@@ -69,6 +69,11 @@ def generate_altitude_plot(selected_bodies, latitude, longitude, hours):
 
         plt.axhline(0, color='black', linewidth=2)
         plt.xlabel('Local Time')
+
+        # 設定時間格式為當地時區
+        plt.gca().xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%Y-%m-%d %H:%M', tz=timezone))
+        plt.gca().xaxis.set_major_locator(matplotlib.dates.HourLocator(interval=1))
+
         plt.ylabel('Altitude (degrees)')
         plt.title(f'Altitude Changes of Celestial Bodies Over the Next {hours} Hours (Local Time)')
         plt.legend()
