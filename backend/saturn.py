@@ -12,8 +12,6 @@ from astropy.time import Time
 import astropy.units as u
 import matplotlib.pyplot as plt
 from datetime import datetime
-from timezonefinder import TimezoneFinder
-import pytz
 
 app = Flask(__name__)
 CORS(app)
@@ -100,7 +98,7 @@ def generate_chart():
         if invalid_bodies:
             return jsonify({
                 'status': 'error',
-                'message': f'不支援的天體：{', '.join(invalid_bodies)}'
+                'message': f"不支援的天體：{', '.join(invalid_bodies)}"
             }), 400
 
         lat, lon, loc_error = validate_location(latitude, longitude)
