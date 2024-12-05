@@ -4,63 +4,23 @@
     <meta charset="UTF-8">
     <title>天體高度變化圖表</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 40px;
-        }
-        .container {
-            max-width: 800px;
-            margin: auto;
-        }
-        .form-group {
-            margin-top: 20px;
-        }
-        .form-group label {
-            font-weight: bold;
-            display: block;
-            margin-bottom: 5px;
-        }
-        .checkbox-group {
-            display: flex;
-            flex-wrap: wrap;
-        }
-        .checkbox-group label {
-            margin-right: 15px;
-        }
-        .location-options {
-            margin-top: 20px;
-        }
-        .location-options label {
-            margin-right: 20px;
-        }
-        .manual-location {
-            display: none;
-            margin-top: 10px;
-        }
-        input, button {
-            padding: 8px;
-            margin-top: 5px;
-        }
-        button {
-            padding: 10px 20px;
-            margin-top: 20px;
-        }
-        img {
-            max-width: 100%;
-            margin-top: 20px;
-        }
-        .error {
-            color: red;
-            margin-top: 20px;
-        }
-        #loading {
-            display: none;
-            font-size: 16px;
-            color: blue;
-        }
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .container { max-width: 800px; margin: auto; }
+        .form-group { margin-top: 20px; }
+        .form-group label { font-weight: bold; display: block; margin-bottom: 5px; }
+        .checkbox-group { display: flex; flex-wrap: wrap; }
+        .checkbox-group label { margin-right: 15px; }
+        .location-options { margin-top: 20px; }
+        .location-options label { margin-right: 20px; }
+        .manual-location { display: none; margin-top: 10px; }
+        input, button { padding: 8px; margin-top: 5px; }
+        button { padding: 10px 20px; margin-top: 20px; }
+        img { max-width: 100%; margin-top: 20px; }
+        .error { color: red; margin-top: 20px; }
+        #loading { display: none; font-size: 16px; color: blue; }
     </style>
     <script>
-        const API_URL = "https://saturn-huk9.onrender.com";
+        const API_URL = "https://saturn-huk9.onrender.com"; // 更新為你的後端 URL
 
         function getLocation() {
             if (navigator.geolocation) {
@@ -125,12 +85,12 @@
                 longitude: formData.get("manual_longitude") || formData.get("auto_longitude"),
             };
 
+            console.log("Sending data:", data);
+
             try {
                 const response = await fetch(API_URL, {
                     method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
+                    headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(data)
                 });
 
@@ -139,6 +99,8 @@
                 }
 
                 const result = await response.json();
+                console.log("Response Data:", result);
+
                 if (result.image_url) {
                     resultContainer.innerHTML = `
                         <h2>生成的圖表:</h2>
