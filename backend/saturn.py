@@ -12,8 +12,6 @@ from astropy.time import Time
 import astropy.units as u
 import matplotlib.pyplot as plt
 from datetime import datetime
-import pytz
-from timezonefinder import TimezoneFinder
 
 app = Flask(__name__)
 CORS(app)
@@ -44,13 +42,6 @@ def generate_altitude_plot(selected_bodies, latitude, longitude, hours):
         location = EarthLocation(lat=latitude * u.deg, lon=longitude * u.deg, height=0 * u.m)
         times = t + np.linspace(0, hours, 100) * u.hour
 
-        # 獲取當地時區
-        tf = TimezoneFinder()
-        timezone_str = tf.timezone_at(lng=longitude, lat=latitude)
-        if timezone_str is None:
-            timezone_str = 'UTC'
-        timezone = pytz.timezone(timezone_str)
-
         plt.figure(figsize=(12, 7))
         plt.clf()
 
@@ -61,21 +52,16 @@ def generate_altitude_plot(selected_bodies, latitude, longitude, hours):
                     AltAz(obstime=times, location=location)
                 )
                 alts = altazs.alt.degree
-                local_times = [t.datetime.replace(tzinfo=pytz.utc).astimezone(timezone) for t in times]
-                plt.plot(local_times, alts, label=body_name.capitalize())
+                utc_datetimes = times.datetime
+                plt.plot(utc_datetimes, alts, label=body_name.capitalize())
                 results[body_name] = 'success'
             except Exception as e:
                 results[body_name] = f"Error: {str(e)}"
 
         plt.axhline(0, color='black', linewidth=2)
-        plt.xlabel('Local Time')
-
-        # 設定時間格式為當地時區
-        plt.gca().xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%Y-%m-%d %H:%M', tz=timezone))
-        plt.gca().xaxis.set_major_locator(matplotlib.dates.HourLocator(interval=1))
-
-        plt.ylabel('Altitude (degrees)')
-        plt.title(f'Altitude Changes of Celestial Bodies Over the Next {hours} Hours (Local Time)')
+        plt.xlabel('UTC 時間')
+        plt.ylabel('高度（度）')
+        plt.title(f'接下來 {hours} 小時內天體高度變化（UTC 時間）')
         plt.legend()
         plt.grid(True)
         plt.xticks(rotation=45)
