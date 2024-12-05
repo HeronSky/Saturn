@@ -50,6 +50,10 @@
             margin-bottom: 20px;
             text-align: center;
         }
+        #download-btn {
+            display: none;
+            margin-top: 15px;
+        }
     </style>
     <meta property="og:title" content="Saturn 行星高度變化圖表">
     <meta property="og:description" content="生成並顯示行星高度變化圖表">
@@ -105,6 +109,7 @@
         <div id="loading" data-zh="正在生成圖表，請稍候..." data-en="Generating chart, please wait...">正在生成圖表，請稍候...</div>
         <div id="error"></div>
         <div id="result"></div>
+        <button id="download-btn" onclick="downloadImage()" style="display: none;" data-zh="下載圖片" data-en="Download Image">下載圖片</button>
     </div>
 
     <script>
@@ -162,9 +167,11 @@
             const errorEl = document.getElementById('error');
             const resultEl = document.getElementById('result');
             const loadingEl = document.getElementById('loading');
+            const downloadBtn = document.getElementById('download-btn');
             errorEl.style.display = 'none';
             resultEl.innerHTML = '';
             loadingEl.style.display = 'block';
+            downloadBtn.style.display = 'none';
 
             const selectedBodies = Array.from(
                 document.querySelectorAll('input[name="body"]:checked')
@@ -200,6 +207,14 @@
                     img.alt = currentLanguage === 'zh' ? '天體高度變化圖表' : 'Planet Altitude Chart';
                     resultEl.innerHTML = '';
                     resultEl.appendChild(img);
+
+                    downloadBtn.style.display = 'block';
+                    downloadBtn.onclick = function() {
+                        const link = document.createElement('a');
+                        link.href = img.src;
+                        link.download = 'chart.png';
+                        link.click();
+                    };
                 } else {
                     showError(response.data.message);
                 }
