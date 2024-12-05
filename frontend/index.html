@@ -1,194 +1,211 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>天體高度變化圖表</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; margin: 40px; }
-        .container { max-width: 800px; margin: auto; }
-        .form-group { margin-top: 20px; }
-        .form-group label { font-weight: bold; display: block; margin-bottom: 5px; }
-        .checkbox-group { display: flex; flex-wrap: wrap; }
-        .checkbox-group label { margin-right: 15px; }
-        .location-options { margin-top: 20px; }
-        .location-options label { margin-right: 20px; }
-        .manual-location { display: none; margin-top: 10px; }
-        input, button { padding: 8px; margin-top: 5px; }
-        button { padding: 10px 20px; margin-top: 20px; }
-        img { max-width: 100%; margin-top: 20px; }
-        .error { color: red; margin-top: 20px; }
-        #loading { display: none; font-size: 16px; color: blue; }
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .checkbox-group {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+        .checkbox-group label {
+            display: flex;
+            align-items: center;
+        }
+        #loading, #error {
+            display: none;
+            margin-top: 15px;
+        }
+        #error {
+            color: red;
+        }
+        #result img {
+            max-width: 100%;
+            margin-top: 15px;
+        }
+        #location-btn {
+            margin-left: 10px;
+        }
+        .language-toggle {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+        }
+        .language-toggle button {
+            margin-left: 5px;
+        }
     </style>
-    <script>
-        const API_URL = "https://saturn-huk9.onrender.com"; // 更新為你的後端 URL
-
-        function getLocation() {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(setPosition, showError);
-            } else {
-                alert("您的瀏覽器不支持地理定位 API");
-            }
-        }
-
-        function setPosition(position) {
-            document.getElementById('auto_latitude').value = position.coords.latitude;
-            document.getElementById('auto_longitude').value = position.coords.longitude;
-            document.getElementById('coordinates').innerText = `經度: ${position.coords.longitude}, 緯度: ${position.coords.latitude}`;
-        }
-
-        function showError(error) {
-            let message = "";
-            switch (error.code) {
-                case error.PERMISSION_DENIED:
-                    message = "用戶拒絕了地理定位請求。";
-                    break;
-                case error.POSITION_UNAVAILABLE:
-                    message = "位置資訊不可用。";
-                    break;
-                case error.TIMEOUT:
-                    message = "獲取位置的請求超時。";
-                    break;
-                case error.UNKNOWN_ERROR:
-                    message = "發生未知錯誤。";
-                    break;
-            }
-            alert(message);
-        }
-
-        function toggleLocationInput() {
-            const manualRadio = document.getElementById('manual');
-            const manualInputs = document.getElementById('manual-location');
-            if (manualRadio.checked) {
-                manualInputs.style.display = 'block';
-            } else {
-                manualInputs.style.display = 'none';
-                document.getElementById('manual_latitude').value = '';
-                document.getElementById('manual_longitude').value = '';
-            }
-        }
-
-        async function submitForm(event) {
-            event.preventDefault();
-
-            const loading = document.getElementById("loading");
-            const resultContainer = document.getElementById("result");
-            const errorContainer = document.getElementById("error");
-            loading.style.display = "block";
-            resultContainer.innerHTML = "";
-            errorContainer.innerHTML = "";
-
-            const formData = new FormData(event.target);
-            const data = {
-                bodies: formData.getAll("bodies"),
-                hours: formData.get("hours"),
-                latitude: formData.get("manual_latitude") || formData.get("auto_latitude"),
-                longitude: formData.get("manual_longitude") || formData.get("auto_longitude"),
-            };
-
-            console.log("Sending data:", data);
-
-            try {
-                const response = await fetch(API_URL, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(data)
-                });
-
-                if (!response.ok) {
-                    throw new Error("API 請求失敗，請檢查輸入或稍後再試。");
-                }
-
-                const result = await response.json();
-                console.log("Response Data:", result);
-
-                if (result.image_url) {
-                    resultContainer.innerHTML = `
-                        <h2>生成的圖表:</h2>
-                        <img src="${result.image_url}" alt="天體高度變化圖表">
-                        <a href="${result.image_url}" download="altitude_plot.png">
-                            <button>下載圖表</button>
-                        </a>
-                    `;
-                } else {
-                    throw new Error("未能獲取圖表結果。");
-                }
-            } catch (error) {
-                errorContainer.innerText = error.message;
-            } finally {
-                loading.style.display = "none";
-            }
-        }
-
-        window.onload = function() {
-            getLocation();
-        };
-
-        function toggleLanguage() {
-            const currentLanguage = document.documentElement.lang;
-            const elementsToTranslate = document.querySelectorAll('[data-zh], [data-en]');
-            if (currentLanguage === 'zh') {
-                document.documentElement.lang = 'en';
-                document.getElementById('language-toggle').innerText = '切換到中文';
-                elementsToTranslate.forEach(el => {
-                    el.innerText = el.getAttribute('data-en');
-                });
-            } else {
-                document.documentElement.lang = 'zh';
-                document.getElementById('language-toggle').innerText = 'Switch to English';
-                elementsToTranslate.forEach(el => {
-                    el.innerText = el.getAttribute('data-zh');
-                });
-            }
-        }
-    </script>
 </head>
 <body>
+    <div class="language-toggle">
+        <button onclick="changeLanguage('zh')">中文</button>
+        <button onclick="changeLanguage('en')">English</button>
+    </div>
+
     <div class="container">
-        <button id="language-toggle" onclick="toggleLanguage()">Switch to English</button>
-        <h1 data-zh="天體高度變化圖表" data-en="Celestial Altitude Chart">天體高度變化圖表</h1>
-        <form id="celestialForm" onsubmit="submitForm(event)">
-            <div class="form-group">
-                <label data-zh="選擇天體:" data-en="Select Celestial Bodies:">選擇天體:</label>
-                <div class="checkbox-group">
-                    <label><input type="checkbox" name="bodies" value="mercury"> <span data-zh="水星" data-en="Mercury">水星</span></label>
-                    <label><input type="checkbox" name="bodies" value="venus"> <span data-zh="金星" data-en="Venus">金星</span></label>
-                    <label><input type="checkbox" name="bodies" value="mars"> <span data-zh="火星" data-en="Mars">火星</span></label>
-                    <label><input type="checkbox" name="bodies" value="jupiter"> <span data-zh="木星" data-en="Jupiter">木星</span></label>
-                    <label><input type="checkbox" name="bodies" value="saturn"> <span data-zh="土星" data-en="Saturn">土星</span></label>
-                    <label><input type="checkbox" name="bodies" value="uranus"> <span data-zh="天王星" data-en="Uranus">天王星</span></label>
-                    <label><input type="checkbox" name="bodies" value="neptune"> <span data-zh="海王星" data-en="Neptune">海王星</span></label>
-                    <label><input type="checkbox" name="bodies" value="moon"> <span data-zh="月亮" data-en="Moon">月亮</span></label>
-                    <label><input type="checkbox" name="bodies" value="sun"> <span data-zh="太陽" data-en="Sun">太陽</span></label>
-                </div>
-            </div>
+        <h1 data-zh="天體高度變化圖表" data-en="Celestial Body Altitude Chart">天體高度變化圖表</h1>
 
-            <div class="form-group">
-                <label for="hours" data-zh="輸入時間範圍（小時）:" data-en="Enter Time Range (hours):">輸入時間範圍（小時）:</label>
-                <input type="number" id="hours" name="hours" value="8" min="1" required>
+        <div class="form-group">
+            <label data-zh="選擇天體:" data-en="Select Celestial Bodies:">選擇天體:</label>
+            <div class="checkbox-group">
+                <label><input type="checkbox" name="body" value="mercury" data-zh="水星" data-en="Mercury"> <span data-zh="水星" data-en="Mercury">水星</span></label>
+                <label><input type="checkbox" name="body" value="venus" data-zh="金星" data-en="Venus"> <span data-zh="金星" data-en="Venus">金星</span></label>
+                <label><input type="checkbox" name="body" value="mars" data-zh="火星" data-en="Mars"> <span data-zh="火星" data-en="Mars">火星</span></label>
+                <label><input type="checkbox" name="body" value="jupiter" data-zh="木星" data-en="Jupiter"> <span data-zh="木星" data-en="Jupiter">木星</span></label>
+                <label><input type="checkbox" name="body" value="saturn" data-zh="土星" data-en="Saturn"> <span data-zh="土星" data-en="Saturn">土星</span></label>
+                <label><input type="checkbox" name="body" value="uranus" data-zh="天王星" data-en="Uranus"> <span data-zh="天王星" data-en="Uranus">天王星</span></label>
+                <label><input type="checkbox" name="body" value="neptune" data-zh="海王星" data-en="Neptune"> <span data-zh="海王星" data-en="Neptune">海王星</span></label>
+                <label><input type="checkbox" name="body" value="moon" data-zh="月亮" data-en="Moon"> <span data-zh="月亮" data-en="Moon">月亮</span></label>
+                <label><input type="checkbox" name="body" value="sun" data-zh="太陽" data-en="Sun"> <span data-zh="太陽" data-en="Sun">太陽</span></label>
             </div>
+        </div>
 
-            <div class="form-group location-options">
-                <label data-zh="選擇位置方法:" data-en="Select Location Method:">選擇位置方法:</label>
-                <label><input type="radio" name="location_method" value="automatic" id="automatic" checked onclick="toggleLocationInput()"> <span data-zh="使用當前位置" data-en="Use Current Location">使用當前位置</span></label>
-                <label><input type="radio" name="location_method" value="manual" id="manual" onclick="toggleLocationInput()"> <span data-zh="手動輸入" data-en="Enter Manually">手動輸入</span></label>
-            </div>
+        <div class="form-group">
+            <label for="hours" data-zh="時間範圍（小時）:" data-en="Time Range (Hours):">時間範圍（小時）:</label>
+            <input type="number" id="hours" name="hours" min="1" max="24" value="8">
+        </div>
 
-            <div class="form-group manual-location" id="manual-location" style="display:none;">
-                <label for="manual_latitude" data-zh="緯度:" data-en="Latitude:">緯度:</label>
-                <input type="number" step="any" id="manual_latitude" name="manual_latitude" placeholder="輸入緯度">
-                <label for="manual_longitude" data-zh="經度:" data-en="Longitude:">經度:</label>
-                <input type="number" step="any" id="manual_longitude" name="manual_longitude" placeholder="輸入經度">
-            </div>
+        <div class="form-group">
+            <label for="latitude" data-zh="緯度:" data-en="Latitude:">緯度:</label>
+            <input type="number" id="latitude" name="latitude" step="0.0001" required>
+            
+            <label for="longitude" data-zh="經度:" data-en="Longitude:">經度:</label>
+            <input type="number" id="longitude" name="longitude" step="0.0001" required>
+            
+            <button id="location-btn" onclick="getCurrentLocation()" data-zh="自動獲取位置" data-en="Get Current Location">自動獲取位置</button>
+        </div>
 
-            <input type="hidden" id="auto_latitude" name="auto_latitude" value="">
-            <input type="hidden" id="auto_longitude" name="auto_longitude" value="">
-            <p id="coordinates" data-zh="經度: N/A, 緯度: N/A" data-en="Longitude: N/A, Latitude: N/A">經度: N/A, 緯度: N/A</p>
-            <button type="submit" data-zh="生成圖表" data-en="Generate Chart">生成圖表</button>
-        </form>
+        <button onclick="generateChart()" data-zh="生成圖表" data-en="Generate Chart">生成圖表</button>
 
         <div id="loading" data-zh="正在生成圖表，請稍候..." data-en="Generating chart, please wait...">正在生成圖表，請稍候...</div>
-        <div id="error" class="error"></div>
+        <div id="error"></div>
         <div id="result"></div>
     </div>
+
+    <script>
+        // 預設語言為中文
+        let currentLanguage = 'zh';
+
+        function changeLanguage(lang) {
+            currentLanguage = lang;
+            // 更新所有帶有 data-zh 和 data-en 屬性的元素
+            document.querySelectorAll('[data-zh][data-en]').forEach(el => {
+                el.textContent = el.getAttribute(`data-${lang}`);
+            });
+        }
+
+        function showError(message) {
+            const errorEl = document.getElementById('error');
+            errorEl.textContent = message;
+            errorEl.style.display = 'block';
+        }
+
+        function getCurrentLocation() {
+            const latInput = document.getElementById('latitude');
+            const lonInput = document.getElementById('longitude');
+            const errorEl = document.getElementById('error');
+
+            errorEl.style.display = 'none';
+            errorEl.textContent = '';
+
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    latInput.value = position.coords.latitude.toFixed(4);
+                    lonInput.value = position.coords.longitude.toFixed(4);
+                },
+                function(error) {
+                    let errorMessage = currentLanguage === 'zh' ? '無法獲取位置：' : 'Unable to get location: ';
+                    switch(error.code) {
+                        case error.PERMISSION_DENIED:
+                            errorMessage += currentLanguage === 'zh' ? '用戶拒絕定位請求' : 'User denied location request';
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            errorMessage += currentLanguage === 'zh' ? '位置資訊不可用' : 'Location information unavailable';
+                            break;
+                        case error.TIMEOUT:
+                            errorMessage += currentLanguage === 'zh' ? '定位請求超時' : 'Location request timed out';
+                            break;
+                        default:
+                            errorMessage += currentLanguage === 'zh' ? '未知錯誤' : 'Unknown error';
+                    }
+                    
+                    errorEl.textContent = errorMessage;
+                    errorEl.style.display = 'block';
+                }
+            );
+        }
+
+        function generateChart() {
+            const errorEl = document.getElementById('error');
+            const resultEl = document.getElementById('result');
+            const loadingEl = document.getElementById('loading');
+            errorEl.style.display = 'none';
+            resultEl.innerHTML = '';
+            loadingEl.style.display = 'block';
+
+            const selectedBodies = Array.from(
+                document.querySelectorAll('input[name="body"]:checked')
+            ).map(el => el.value);
+
+            const hours = document.getElementById('hours').value;
+            const latitude = document.getElementById('latitude').value;
+            const longitude = document.getElementById('longitude').value;
+
+            if (selectedBodies.length === 0) {
+                loadingEl.style.display = 'none';
+                showError(currentLanguage === 'zh' ? '請至少選擇一個天體' : 'Please select at least one celestial body');
+                return;
+            }
+
+            if (!latitude || !longitude) {
+                loadingEl.style.display = 'none';
+                showError(currentLanguage === 'zh' ? '請輸入緯度和經度' : 'Please enter latitude and longitude');
+                return;
+            }
+
+            axios.post('https://saturn-huk9.onrender.com/celestial-chart', {
+                bodies: selectedBodies,
+                hours: hours,
+                latitude: latitude,
+                longitude: longitude
+            })
+            .then(response => {
+                loadingEl.style.display = 'none';
+                if (response.data.status === 'success') {
+                    const img = document.createElement('img');
+                    img.src = 'data:image/png;base64,' + response.data.image_base64;
+                    img.alt = currentLanguage === 'zh' ? '天體高度變化圖表' : 'Celestial Body Altitude Chart';
+                    resultEl.innerHTML = '';
+                    resultEl.appendChild(img);
+                } else {
+                    showError(response.data.message);
+                }
+            })
+            .catch(error => {
+                loadingEl.style.display = 'none';
+                showError(error.response?.data?.message || (currentLanguage === 'zh' ? '發生未知錯誤' : 'An unknown error occurred'));
+            });
+        }
+
+        // 頁面載入時檢查是否支持定位
+        window.onload = function() {
+            const locationBtn = document.getElementById('location-btn');
+            if (!navigator.geolocation) {
+                locationBtn.style.display = 'none';
+            }
+        };
+    </script>
 </body>
 </html>
