@@ -5,17 +5,17 @@ import numpy as np
 import matplotlib
 matplotlib.use('Agg')
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template_string
 from flask_cors import CORS
 from astropy.coordinates import get_body, EarthLocation, AltAz
 from astropy.time import Time
 import astropy.units as u
 import matplotlib.pyplot as plt
-from timezonefinder import TimezoneFinder
+from datetime import datetime
 import pytz
 
 app = Flask(__name__)
-CORS(app, resources={r"/celestial-chart": {"origins": ["http://localhost", "https://example.com"]}})
+CORS(app)
 
 SUPPORTED_BODIES = [
     'mercury', 'venus', 'mars', 'jupiter',
@@ -24,42 +24,25 @@ SUPPORTED_BODIES = [
 
 def validate_location(latitude, longitude):
     try:
-        if not latitude or not longitude:
-            raise ValueError("Latitude and longitude are required.")
         lat = float(latitude)
         lon = float(longitude)
+
         if not (-90 <= lat <= 90):
-            raise ValueError("Latitude must be between -90 and 90.")
+            raise ValueError("緯度必須介於 -90 至 90 之間")
+
         if not (-180 <= lon <= 180):
-            raise ValueError("Longitude must be between -180 and 180.")
+            raise ValueError("經度必須介於 -180 至 180 之間")
+
         return lat, lon, None
     except (ValueError, TypeError) as e:
         return None, None, str(e)
 
-def get_local_timezone(latitude, longitude):
-    try:
-        tf = TimezoneFinder()
-        timezone_str = tf.timezone_at(lat=latitude, lng=longitude)
-        if timezone_str is None:
-            raise ValueError("Unable to determine timezone for the location.")
-        return pytz.timezone(timezone_str)
-    except Exception as e:
-        return None, str(e)
-
 def generate_altitude_plot(selected_bodies, latitude, longitude, hours):
     try:
-        hours = min(max(hours, 1), 24)  # 限制時間範圍在 1 到 24 小時內
         t = Time.now()
         location = EarthLocation(lat=latitude * u.deg, lon=longitude * u.deg, height=0 * u.m)
-
-        # 動態調整時間點數量
-        num_points = int(min(100, hours * 10))  # 每小時最多 10 點，總數最多 100
-        times = t + np.linspace(0, hours, num_points) * u.hour
-
-        # 獲取當地時區
-        timezone, tz_error = get_local_timezone(latitude, longitude)
-        if tz_error:
-            raise ValueError(tz_error)
+        timezone = pytz.timezone('UTC')
+        times = t + np.linspace(0, hours, 100) * u.hour
 
         plt.figure(figsize=(12, 7))
         plt.clf()
@@ -77,7 +60,7 @@ def generate_altitude_plot(selected_bodies, latitude, longitude, hours):
             except Exception as e:
                 results[body_name] = f"Error: {str(e)}"
 
-        plt.axhline(0, color='black', linewidth=2)  # 地平線
+        plt.axhline(0, color='black', linewidth=2)
         plt.xlabel('Local Time')
         plt.ylabel('Altitude (degrees)')
         plt.title(f'Altitude Changes of Celestial Bodies Over the Next {hours} Hours (Local Time)')
@@ -87,7 +70,7 @@ def generate_altitude_plot(selected_bodies, latitude, longitude, hours):
         plt.tight_layout()
 
         img_buffer = io.BytesIO()
-        plt.savefig(img_buffer, format='png', dpi=80, optimize=True)
+        plt.savefig(img_buffer, format='png')
         plt.close()
         img_buffer.seek(0)
 
@@ -98,6 +81,10 @@ def generate_altitude_plot(selected_bodies, latitude, longitude, hours):
     except Exception as e:
         plt.close()
         return None, None, f"Error generating chart: {str(e)}"
+
+@app.route('/')
+def index():
+    return render_template_string("<h1>Welcome to the Celestial Chart API</h1>")
 
 @app.route('/celestial-chart', methods=['POST'])
 def generate_chart():
@@ -112,14 +99,14 @@ def generate_chart():
         if not selected_bodies:
             return jsonify({
                 'status': 'error',
-                'message': 'Please select at least one celestial body'
+                'message': '請至少選擇一個天體'
             }), 400
 
         invalid_bodies = set(selected_bodies) - set(SUPPORTED_BODIES)
         if invalid_bodies:
             return jsonify({
                 'status': 'error',
-                'message': f'Unsupported celestial bodies: {", ".join(invalid_bodies)}'
+                'message': f"不支援的天體：{', '.join(invalid_bodies)}"
             }), 400
 
         lat, lon, loc_error = validate_location(latitude, longitude)
