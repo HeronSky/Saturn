@@ -110,23 +110,22 @@ def index():
     error_message = None
 
     if request.method == 'POST':
-        # 獲取表單數據
+  
         selected_bodies = request.form.getlist('bodies')
         hours = request.form.get('hours', 8)
         location_method = request.form.get('location_method', 'automatic')
 
-        # 驗證選擇的天體
+
         if not selected_bodies:
             error_message = "請至少選擇一個天體。" if lang == 'zh' else "Please select at least one celestial body."
             return render_template('index.html', error_message=error_message, lang=lang)
 
-        # 驗證選擇的天體是否在支持列表中
         invalid_bodies = set(selected_bodies) - set(SUPPORTED_BODIES)
         if invalid_bodies:
             error_message = f"不支持的天體：{', '.join(invalid_bodies)}"
             return render_template('index.html', error_message=error_message, lang=lang)
 
-        # 驗證時間範圍
+      
         try:
             hours = float(hours)
             if hours <= 0 or hours > 24:
@@ -135,7 +134,7 @@ def index():
             error_message = "請輸入有效的時間範圍（1-24小時）。" if lang == 'zh' else "Please enter a valid time range (1-24 hours)."
             return render_template('index.html', error_message=error_message, lang=lang)
 
-        # 處理位置
+
         if location_method == 'manual':
             latitude = request.form.get('manual_latitude')
             longitude = request.form.get('manual_longitude')
@@ -143,13 +142,13 @@ def index():
             latitude = request.form.get('auto_latitude')
             longitude = request.form.get('auto_longitude')
 
-        # 驗證地理位置
+        
         latitude, longitude = validate_location(latitude, longitude, lang)
         if not latitude or not longitude:
             error_message = longitude  # longitude 在這裡實際上是錯誤消息
             return render_template('index.html', error_message=error_message, lang=lang)
 
-        # 嘗試確定時區
+
         try:
             timezone_str = tf.timezone_at(lng=longitude, lat=latitude)
             if timezone_str is None:
@@ -171,10 +170,23 @@ def index():
         if plot_error:
             error_message = plot_error
 
-    return render_template('index.html', 
-                           image_url=url_for('static', filename=image_filename) if image_filename else None, 
-                           error_message=error_message, 
-                           lang=lang)
+ 
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    image_filename = f'altitude_plot_{timestamp}.png'
+
+  
+    app.config['UPLOAD_FOLDER'] = 'static'
+
+  
+    if image_filename:
+        image_url = url_for('static', filename=image_filename)
+    else:
+        image_url = None
+
+    return render_template('index.html',
+                          image_url=image_url,
+                          error_message=error_message,
+                          lang=lang)
 
 @app.route('/download/<filename>')
 def download_file(filename):
