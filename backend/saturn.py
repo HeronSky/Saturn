@@ -13,6 +13,7 @@ import astropy.units as u
 import matplotlib.pyplot as plt
 from datetime import datetime
 import pytz
+from timezonefinder import TimezoneFinder
 
 app = Flask(__name__)
 CORS(app)
@@ -41,8 +42,14 @@ def generate_altitude_plot(selected_bodies, latitude, longitude, hours):
     try:
         t = Time.now()
         location = EarthLocation(lat=latitude * u.deg, lon=longitude * u.deg, height=0 * u.m)
-        timezone = pytz.timezone('UTC')
         times = t + np.linspace(0, hours, 100) * u.hour
+
+        # 獲取當地時區
+        tf = TimezoneFinder()
+        timezone_str = tf.timezone_at(lng=longitude, lat=latitude)
+        if timezone_str is None:
+            timezone_str = 'UTC'
+        timezone = pytz.timezone(timezone_str)
 
         plt.figure(figsize=(12, 7))
         plt.clf()
