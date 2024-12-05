@@ -8,21 +8,25 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            max-width: 600px;
+            max-width: 800px;
             margin: 0 auto;
             padding: 20px;
+            text-align: center;
         }
         .form-group {
-            margin-bottom: 15px;
+            margin-bottom: 20px;
+            text-align: center;
         }
         .checkbox-group {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 10px;
+            justify-content: center;
         }
         .checkbox-group label {
             display: flex;
             align-items: center;
+            justify-content: center;
         }
         #loading, #error {
             display: none;
@@ -37,22 +41,73 @@
         }
         #location-btn {
             margin-left: 10px;
+            padding: 5px 10px;
+            border: 1px solid #007bff;
+            background-color: white;
+            color: #007bff;
+            cursor: pointer;
+            border-radius: 3px;
+        }
+        #location-btn:hover {
+            background-color: #007bff;
+            color: white;
         }
         .language-toggle {
-            position: absolute;
-            top: 10px;
-            right: 10px;
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
         }
         .language-toggle button {
-            margin-left: 5px;
+            margin: 0 5px;
+            padding: 8px 16px;
+            border: 1px solid #007bff;
+            background-color: white;
+            color: #007bff;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        .language-toggle button:hover {
+            background-color: #007bff;
+            color: white;
         }
         .github-link {
             margin-bottom: 20px;
             text-align: center;
         }
+        .github-link a {
+            color: #007bff;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .github-link a:hover {
+            text-decoration: underline;
+        }
+        #generate-btn {
+            padding: 10px 20px;
+            border: none;
+            background-color: #28a745;
+            color: white;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        #generate-btn:hover {
+            background-color: #218838;
+        }
         #download-btn {
             display: none;
             margin-top: 15px;
+            padding: 8px 16px;
+            border: none;
+            background-color: #17a2b8;
+            color: white;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        #download-btn:hover {
+            background-color: #138496;
         }
     </style>
     <meta property="og:title" content="Saturn 行星高度變化圖表">
@@ -62,13 +117,13 @@
     <meta property="og:type" content="website">
 </head>
 <body>
-    <div class="github-link">
-        <a href="https://github.com/HeronSky/Saturn" target="_blank" data-zh="GitHub 專案" data-en="GitHub Project">GitHub 專案</a>
-    </div>
-
     <div class="language-toggle">
         <button onclick="changeLanguage('zh')">中文</button>
         <button onclick="changeLanguage('en')">English</button>
+    </div>
+
+    <div class="github-link">
+        <a href="https://github.com/HeronSky/Saturn" target="_blank" data-zh="GitHub 專案" data-en="GitHub Project">GitHub 專案</a>
     </div>
 
     <div class="container">
@@ -84,7 +139,7 @@
                 <label><input type="checkbox" name="body" value="saturn" data-zh="土星" data-en="Saturn"> <span data-zh="土星" data-en="Saturn">土星</span></label>
                 <label><input type="checkbox" name="body" value="uranus" data-zh="天王星" data-en="Uranus"> <span data-zh="天王星" data-en="Uranus">天王星</span></label>
                 <label><input type="checkbox" name="body" value="neptune" data-zh="海王星" data-en="Neptune"> <span data-zh="海王星" data-en="Neptune">海王星</span></label>
-                <label><input type="checkbox" name="body" value="moon" data-zh="月亮" data-en="Moon"> <span data-zh="月亮" data-en="Moon">月亮</span></label>
+                <label><input type="checkbox" name="body" value="moon" data-zh="月球" data-en="Moon"> <span data-zh="月球" data-en="Moon">月球</span></label>
                 <label><input type="checkbox" name="body" value="sun" data-zh="太陽" data-en="Sun"> <span data-zh="太陽" data-en="Sun">太陽</span></label>
             </div>
         </div>
@@ -104,7 +159,9 @@
             <button id="location-btn" onclick="getCurrentLocation()" data-zh="自動獲取位置" data-en="Get Current Location">自動獲取位置</button>
         </div>
 
-        <button onclick="generateChart()" data-zh="生成圖表" data-en="Generate Chart">生成圖表</button>
+        <div class="form-group">
+            <button id="generate-btn" onclick="generateChart()" data-zh="生成圖表" data-en="Generate Chart">生成圖表</button>
+        </div>
 
         <div id="loading" data-zh="正在生成圖表，請稍候..." data-en="Generating chart, please wait...">正在生成圖表，請稍候...</div>
         <div id="error"></div>
