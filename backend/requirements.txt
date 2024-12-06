@@ -6,3 +6,4 @@ numpy
 timezonefinder
 pytz
 APScheduler
+flask_caching
