@@ -3,24 +3,30 @@ import io
 import base64
 import numpy as np
 import matplotlib
-matplotlib.use('Agg')
+matplotlib.use('Agg')  # 使用無圖形介面的後端
 
 from flask import Flask, request, jsonify, render_template_string
+from flask_caching import Cache  # 用於緩存
 from flask_cors import CORS
 from astropy.coordinates import get_body, EarthLocation, AltAz
 from astropy.time import Time
 import astropy.units as u
 import matplotlib.pyplot as plt
-from datetime import datetime
 
+# Flask 初始化
 app = Flask(__name__)
 CORS(app)
 
+# Flask-Caching 設定
+cache = Cache(app, config={'CACHE_TYPE': 'filesystem', 'CACHE_DIR': '/tmp/cache'})
+
+# 支援的天體
 SUPPORTED_BODIES = [
     'mercury', 'venus', 'mars', 'jupiter',
     'saturn', 'uranus', 'neptune', 'moon', 'sun'
 ]
 
+# 驗證經緯度輸入
 def validate_location(latitude, longitude):
     try:
         lat = float(latitude)
@@ -36,6 +42,8 @@ def validate_location(latitude, longitude):
     except (ValueError, TypeError) as e:
         return None, None, str(e)
 
+# 生成天體高度變化圖表
+@cache.memoize(timeout=3600)  # 緩存 1 小時
 def generate_altitude_plot(selected_bodies, latitude, longitude, hours):
     try:
         t = Time.now()
@@ -80,10 +88,12 @@ def generate_altitude_plot(selected_bodies, latitude, longitude, hours):
         plt.close()
         return None, None, f"Error generating chart: {str(e)}"
 
+# 主頁路由
 @app.route('/')
 def index():
     return render_template_string("<h1>Welcome to the Celestial Chart API</h1>")
 
+# 天體圖表生成 API
 @app.route('/celestial-chart', methods=['POST'])
 def generate_chart():
     try:
