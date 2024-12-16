@@ -1,3 +1,9 @@
 [build]
   publish = "."
   command = "echo 'Netlify does not need to build anything for this project.'"
+
+[[redirects]]
+  from = "/api/*"
+  to = "http://37.27.51.34:9862/:splat"
+  status = 200
+  force = true
