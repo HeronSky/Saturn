@@ -1,155 +1,175 @@
-import os
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+import numpy as np
 import io
 import base64
-import numpy as np
-import matplotlib
-matplotlib.use('Agg')  
+import os
+import logging
 
-from flask import Flask, request, jsonify, render_template_string
-from flask_caching import Cache  
-from flask_cors import CORS
-from astropy.coordinates import get_body, EarthLocation, AltAz
+# 在匯入 matplotlib.pyplot 之前設置後端
+import matplotlib
+matplotlib.use('Agg')  # 使用非互動式的 Agg 後端
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+
+from astropy.coordinates import SkyCoord, get_body, EarthLocation, AltAz
+from astroquery.simbad import Simbad
 from astropy.time import Time
 import astropy.units as u
-import matplotlib.pyplot as plt
 
+from timezonefinder import TimezoneFinder
+from zoneinfo import ZoneInfo 
 
 app = Flask(__name__)
 CORS(app)
 
+plt.rcParams['figure.dpi'] = 1000
 
-cache = Cache(app, config={'CACHE_TYPE': 'filesystem', 'CACHE_DIR': '/tmp/cache'})
+# 設定日誌級別
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger('saturn')
 
-
-SUPPORTED_BODIES = [
-    'mercury', 'venus', 'mars', 'jupiter',
-    'saturn', 'uranus', 'neptune', 'moon', 'sun'
-]
-
+def get_deep_sky_body(body_name):
+    result_table = Simbad.query_object(body_name)
+    if result_table is None:
+        raise ValueError(f"無法找到天體資料：{body_name}")
+    ra = result_table['RA'][0]
+    dec = result_table['DEC'][0]
+    coord = SkyCoord(ra + ' ' + dec, unit=(u.hourangle, u.deg), frame='icrs')
+    return coord
 
 def validate_location(latitude, longitude):
     try:
         lat = float(latitude)
         lon = float(longitude)
-
-        if not (-90 <= lat <= 90):
-            raise ValueError("Latitude must be between -90 and 90 degrees")
-
-        if not (-180 <= lon <= 180):
-            raise ValueError("Longitude must be between -180 and 180 degrees")
-
+        if not (-90 <= lat <= 90) or not (-180 <= lon <= 180):
+            return None, None, '緯度或經度超出範圍。'
         return lat, lon, None
-    except (ValueError, TypeError) as e:
-        return None, None, str(e)
+    except ValueError:
+        return None, None, '緯度和經度必須是數字。'
 
-
-@cache.memoize(timeout=3600) 
 def generate_altitude_plot(selected_bodies, latitude, longitude, hours):
     try:
-        t = Time.now()
-        location = EarthLocation(lat=latitude * u.deg, lon=longitude * u.deg, height=0 * u.m)
-        times = t + np.linspace(0, hours, 100) * u.hour
+        # 設定觀測位置
+        location = EarthLocation(lat=latitude * u.deg, lon=longitude * u.deg)
+        logger.info("觀測位置已設定。")
 
-        plt.figure(figsize=(12, 7))
-        plt.clf()
+        # 設定觀測時間範圍
+        time_now = Time.now()
+        delta_hours = np.linspace(0, hours, num=int(hours) * 4)
+        times = time_now + delta_hours * u.hour
+        logger.info("時間範圍已設定。")
 
-        results = {}
-        for body_name in selected_bodies:
+        # 根據經緯度獲取時區
+        tf = TimezoneFinder()
+        timezone_str = tf.timezone_at(lng=longitude, lat=latitude)
+
+        if timezone_str:
             try:
-                altazs = get_body(body_name, times, location).transform_to(
-                    AltAz(obstime=times, location=location)
-                )
-                alts = altazs.alt.degree
-                utc_datetimes = times.datetime
-                plt.plot(utc_datetimes, alts, label=body_name.capitalize())
-                results[body_name] = 'success'
+                tz = ZoneInfo(timezone_str)
+                timezone_display = timezone_str
+                logger.info(f"獲取到時區：{timezone_str}")
             except Exception as e:
-                results[body_name] = f"Error: {str(e)}"
+                logger.error(f"無法載入時區 {timezone_str}：{str(e)}")
+                tz = ZoneInfo('UTC')  # 使用 UTC 作為備用
+                timezone_display = 'UTC'
+        else:
+            tz = ZoneInfo('UTC')  # 無法找到時區，使用 UTC
+            timezone_display = 'UTC'
+            logger.warning("無法根據經緯度獲取時區，預設使用 UTC。")
 
-        plt.axhline(0, color='black', linewidth=2)
-        plt.xlabel('UTC Time')
+        # 將時間轉換為當地時間並移除 tzinfo
+        local_times = times.to_datetime(timezone=tz)
+        local_times = [dt.replace(tzinfo=None) for dt in local_times]
+
+        # 設定 AltAz 參考系
+        altaz = AltAz(obstime=times, location=location)
+        logger.info("AltAz 參考系已設定。")
+
+        # 準備圖表
+        plt.figure(figsize=(10, 6))
+        logger.info("圖表已建立。")
+
+        for body_name in selected_bodies:
+            logger.info(f"處理天體：{body_name}")
+            try:
+                body_lower = body_name.lower()
+                if body_lower in ['sun', 'moon', 'mercury', 'venus', 'mars', 'jupiter', 'saturn', 'uranus', 'neptune', 'pluto']:
+                    # 太陽系天體
+                    body = get_body(body_name, times, location).transform_to(altaz)
+                    altitudes = body.alt.deg
+                else:
+                    # 深空天體
+                    coord = get_deep_sky_body(body_name)
+                    altazs = coord.transform_to(altaz)
+                    altitudes = altazs.alt.deg
+
+                # 使用原始名稱作為標籤
+                label = body_name
+                plt.plot(local_times, altitudes, label=label)
+            except Exception as e:
+                logger.error(f"獲取 {body_name} 資料時出錯：{str(e)}")
+                raise ValueError(f"無法獲取 {body_name} 的資料：{str(e)}")
+
+        # 設置圖表標題和標籤（使用英文）
+        plt.title('Altitude of Celestial Bodies')
+        plt.xlabel('Local Time')
         plt.ylabel('Altitude (degrees)')
-        plt.title(f'Altitude Changes of Celestial Bodies Over the Next {hours} Hours (UTC Time)')
         plt.legend()
         plt.grid(True)
-        plt.xticks(rotation=45)
-        plt.tight_layout()
+        logger.info("圖表已配置。")
 
-        img_buffer = io.BytesIO()
-        plt.savefig(img_buffer, format='png')
+        # 設置 X 軸為當地時間格式
+        plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
+        plt.gcf().autofmt_xdate()  # 自動調整日期標籤角度
+
+        # 在圖表右下角註明時區
+        plt.annotate(f"Timezone: {timezone_display}", xy=(1.0, 0.0), xycoords='axes fraction',
+                     horizontalalignment='right', verticalalignment='bottom',
+                     fontsize=10, bbox=dict(boxstyle="round,pad=0.3", fc="yellow", alpha=0.5))
+
+        # 保存圖表到緩衝區並編碼為 Base64
+        buf = io.BytesIO()
+        plt.savefig(buf, format='png')
+        buf.seek(0)
+        image_base64 = base64.b64encode(buf.read()).decode('utf-8')
         plt.close()
-        img_buffer.seek(0)
+        logger.info("圖表已保存並編碼。")
 
-        img_base64 = base64.b64encode(img_buffer.getvalue()).decode('utf-8')
-
-        return img_base64, results, None
-
+        return image_base64
     except Exception as e:
-        plt.close()
-        return None, None, f"Error generating chart: {str(e)}"
+        logger.error(f"生成圖表時出錯：{str(e)}")
+        raise ValueError(f"生成圖表時出錯：{str(e)}")
 
+@app.route('/generate_plot', methods=['POST'])
+def generate_plot():
+    logger.info("收到 /generate_plot 請求。")
+    data = request.json
+    latitude = data.get('latitude')
+    longitude = data.get('longitude')
+    bodies = data.get('bodies')
+    hours = data.get('hours', 24)
 
-@app.route('/')
-def index():
-    return render_template_string("<h1>Welcome to the Celestial Chart API</h1>")
+    logger.info(f"請求資料：latitude={latitude}, longitude={longitude}, bodies={bodies}, hours={hours}")
 
+    # 驗證位置
+    lat, lon, error = validate_location(latitude, longitude)
+    if error:
+        logger.error(f"位置驗證錯誤：{error}")
+        return jsonify({'message': error}), 400
 
-@app.route('/celestial-chart', methods=['POST'])
-def generate_chart():
+    # 生成圖片
     try:
-        data = request.get_json()
-
-        selected_bodies = data.get('bodies', [])
-        hours = float(data.get('hours', 8))
-        latitude = data.get('latitude')
-        longitude = data.get('longitude')
-
-        if not selected_bodies:
-            return jsonify({
-                'status': 'error',
-                'message': 'Please select at least one celestial body'
-            }), 400
-
-        invalid_bodies = set(selected_bodies) - set(SUPPORTED_BODIES)
-        if invalid_bodies:
-            return jsonify({
-                'status': 'error',
-                'message': f"Unsupported celestial bodies: {', '.join(invalid_bodies)}"
-            }), 400
-
-        lat, lon, loc_error = validate_location(latitude, longitude)
-        if loc_error:
-            return jsonify({
-                'status': 'error',
-                'message': loc_error
-            }), 400
-
-        image_base64, body_results, error = generate_altitude_plot(
-            selected_bodies,
-            lat,
-            lon,
-            hours
-        )
-
-        if error:
-            return jsonify({
-                'status': 'error',
-                'message': error,
-                'body_results': body_results
-            }), 500
-
-        return jsonify({
-            'status': 'success',
-            'image_base64': image_base64,
-            'body_results': body_results
-        })
-
+        image_base64 = generate_altitude_plot(bodies, lat, lon, int(hours))
+        logger.info("圖表生成成功。")
+        return jsonify({'image_base64': image_base64}), 200
+    except ValueError as e:
+        logger.error(f"ValueError：{str(e)}")
+        return jsonify({'message': str(e)}), 400
     except Exception as e:
-        return jsonify({
-            'status': 'error',
-            'message': str(e)
-        }), 500
+        logger.error(f"Exception：{str(e)}")
+        return jsonify({'message': str(e)}), 500
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
+    port = int(os.environ.get('PORT', 9862))
     app.run(debug=False, host='0.0.0.0', port=port, threaded=True)

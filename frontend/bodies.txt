@@ -1,0 +1,32 @@
+Category:行星
+Sun,太陽,Sun
+Mercury,水星,Mercury
+Venus,金星,Venus
+Mars,火星,Mars
+Jupiter,木星,Jupiter
+Saturn,土星,Saturn
+Uranus,天王星,Uranus
+Neptune,海王星,Neptune
+Moon,月球,Moon
+
+Category:星系
+M31,M31(仙女座星系),M31(Andromeda Galaxy),0h 42m 44.3s,+41°16'9"
+M33,M33(三角座星系),M33(Triangulum Galaxy),1h 33m 50s,+30°39'36"
+M51,M51(渦狀星系),M51(Whirlpool Galaxy),13h 29m 52s,+47°11'43"
+M81,M81(波德星系),M81(Bode's Galaxy),9h 55m 33s,+69°3'55"
+M82,M82(雪茄星系),M82(Cigar Galaxy),9h 55m 52s,+69°40'47"
+M101,M101(風車星系),M101(Pinwheel Galaxy),14h 03m 12s,+54°20'57"
+M104,M104(草帽星系),M104(Sombrero Galaxy),12h 39m 59s,-11°37'23"
+NGC253,NGC253(雕刻家星系),NGC253(Sculptor Galaxy),0h 47m 33s,-25°17'20"
+NGC1300,NGC1300(棒旋星系),NGC1300(Barred Spiral Galaxy),3h 19m 41s,-19°24'40"
+
+Category:星雲
+M1,M1(蟹狀星雲),M1(Crab Nebula),5h 34m 31.97s,+22°0'52.1"
+M8,M8(潟湖星雲),M8(Lagoon Nebula),18h 3m 37s,-24°23'12"
+M16,M16(鷹星雲),M16(Eagle Nebula),18h 18m 48s,-13°49'0"
+M20,M20(三裂星雲),M20(Trifid Nebula),17h 59m 1s,-23°1'0"
+M27,M27(啞鈴星雲),M27(Dumbbell Nebula),19h 59m 36s,+22°43'16"
+M42,M42(獵戶座星雲),M42(Orion Nebula),5h 35m 17.3s,-5°23'28"
+M57,M57(環狀星雲),M57(Ring Nebula),18h 53m 35s,+33°1'45"
+NGC3372,NGC3372(船底座星雲),NGC3372(Carina Nebula),10h 45m 8s,-59°52'4"
+NGC7293,NGC7293(螺旋星雲),NGC7293(Helix Nebula),22h 29m 38.5s,-20°50'13"

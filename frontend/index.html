@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Saturn 行星高度變化圖表</title>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min"></script>
+    <script src="https://cdn.jsdelivr.net/npm/astronomy-engine@2.1.19/astronomy.browser.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -12,6 +14,10 @@
             margin: 0 auto;
             padding: 20px;
             text-align: center;
+            background-color: white;
+            color: black;
+            transition: background-color 0.5s ease, color 0.5s ease;
+            position: relative;
         }
         .form-group {
             margin-bottom: 20px;
@@ -38,38 +44,56 @@
         #result img {
             max-width: 100%;
             margin-top: 15px;
+            image-rendering: auto; /* 增加此行以改善圖片品質 */
         }
-        #location-btn {
-            margin-left: 10px;
-            padding: 5px 10px;
-            border: 1px solid #007bff;
-            background-color: white;
-            color: #007bff;
-            cursor: pointer;
-            border-radius: 3px;
-        }
-        #location-btn:hover {
-            background-color: #007bff;
-            color: white;
-        }
-        .language-toggle {
-            display: flex;
-            justify-content: center;
-            margin-bottom: 20px;
-        }
-        .language-toggle button {
-            margin: 0 5px;
+        button, #generate-btn, #download-btn, #location-btn, .language-toggle button, input, select {
             padding: 8px 16px;
-            border: 1px solid #007bff;
-            background-color: white;
+            font-size: 14px;
+            background-color: transparent;
             color: #007bff;
+            border: 2px solid #007bff;
+            border-radius: 8px; /* 調整圓角 */
             cursor: pointer;
-            border-radius: 4px;
-            font-size: 16px;
+            margin: 10px 5px;
+            transition: background-color 0.3s, color 0.3s;
         }
-        .language-toggle button:hover {
+        button:hover, #generate-btn:hover, #download-btn:hover, #location-btn:hover, .language-toggle button:hover {
             background-color: #007bff;
-            color: white;
+            color: #ffffff;
+        }
+        #toggle-dark-mode {
+            padding: 8px 16px;
+            font-size: 14px;
+            background-color: transparent;
+            color: black;
+            border: 2px solid #000000;
+            border-radius: 8px; /* 調整圓角 */
+            cursor: pointer;
+            margin: 10px 5px;
+            transition: background-color 0.3s, color 0.3s;
+            position: fixed;
+            top: 10px;
+            right: 10px;
+        }
+        #toggle-dark-mode:hover {
+            background-color: #000000;
+            color: #ffffff;
+        }
+        .dark-mode #toggle-dark-mode {
+            color: #ffffff;
+            border: 2px solid #ffffff;
+        }
+        .dark-mode #toggle-dark-mode:hover {
+            background-color: #ffffff;
+            color: #000000;
+        }
+        .dark-mode button, .dark-mode #generate-btn, .dark-mode #download-btn, .dark-mode #location-btn, .dark-mode .language-toggle button {
+            color: #4ea8de;
+            border: 2px solid #4ea8de;
+        }
+        .dark-mode button:hover, .dark-mode #generate-btn:hover, .dark-mode #download-btn:hover, .dark-mode #location-btn:hover, .dark-mode .language-toggle button:hover {
+            background-color: #4ea8de;
+            color: #121212;
         }
         .github-link {
             margin-bottom: 20px;
@@ -83,31 +107,120 @@
         .github-link a:hover {
             text-decoration: underline;
         }
-        #generate-btn {
-            padding: 10px 20px;
-            border: none;
-            background-color: #28a745;
-            color: white;
+        .dark-mode {
+            background-color: #1e1e1e;
+            color: #ffffff;
+        }
+        .dark-mode a,
+        .dark-mode a:hover,
+        .dark-mode a:visited {
+            color: #4ea8de;
+        }
+        .dark-mode .form-group label,
+        .dark-mode h1,
+        .dark-mode label {
+            color: #ffffff;
+        }
+        .dark-mode input,
+        .dark-mode select {
+            background-color: #333333;
+            color: #ffffff;
+            border: 1px solid #555555;
+        }
+        .dark-mode input::placeholder {
+            color: #aaaaaa;
+        }
+        .dark-mode #error {
+            color: #ff6b6b;
+        }
+        /* Pagination Styles */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+            gap: 10px;
+        }
+        .pagination button {
+            padding: 6px 12px;
+            font-size: 14px;
+            border: 1px solid #007bff;
+            background-color: transparent;
+            color: #007bff;
+            border-radius: 8px; /* 調整圓角 */
             cursor: pointer;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .pagination button.active,
+        .pagination button:hover {
+            background-color: #007bff;
+            color: #ffffff;
+        }
+        .dark-mode .pagination button {
+            border: 1px solid #4ea8de;
+            color: #4ea8de;
+        }
+        .dark-mode .pagination button.active,
+        .dark-mode .pagination button:hover {
+            background-color: #4ea8de;
+            color: #121212;
+        }
+        /* Selected Bodies Styles */
+        .selected-bodies-container {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .selected-bodies-title {
+            font-size: 14px;
+            font-weight: normal;
+            margin-bottom: 5px;
+            color: inherit;
+        }
+        .selected-bodies {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            background-color: transparent;
+            padding: 5px;
             border-radius: 4px;
-            font-size: 16px;
+            justify-content: center;
         }
-        #generate-btn:hover {
-            background-color: #218838;
+        .body-item {
+            background-color: #dddddd;
+            color: #000000;
+            padding: 3px 6px;
+            border-radius: 8px; /* 調整圓角 */
+            display: flex;
+            align-items: center;
+            font-size: 12px;
+            cursor: pointer;
+            transition: background-color 0.3s, color 0.3s;
         }
-        #download-btn {
-            display: none;
+        .body-item:hover {
+            background-color: #c0c0c0;
+        }
+        .dark-mode .selected-bodies {
+            background-color: transparent;
+        }
+        .dark-mode .body-item {
+            background-color: #555555;
+            color: #ffffff;
+        }
+        .dark-mode .body-item:hover {
+            background-color: #777777;
+        }
+        .checkboxes-title {
+            text-align: center;
+            font-size: 1.5em;
+            margin-bottom: 15px;
+        }
+        /* Category Title Styles */
+        .category-title {
+            text-align: center;
+            grid-column: 1 / -1;
+            font-size: 1.2em;
             margin-top: 15px;
-            padding: 8px 16px;
-            border: none;
-            background-color: #17a2b8;
-            color: white;
-            cursor: pointer;
-            border-radius: 4px;
-            font-size: 16px;
-        }
-        #download-btn:hover {
-            background-color: #138496;
+            margin-bottom: 10px;
+            color: inherit;
         }
     </style>
     <meta property="og:title" content="Saturn 行星高度變化圖表">
@@ -122,6 +235,8 @@
         <button onclick="changeLanguage('en')">English</button>
     </div>
 
+    <button id="toggle-dark-mode" onclick="toggleDarkMode()" data-zh="深色模式" data-en="Dark Mode">深色模式</button>
+
     <div class="github-link">
         <a href="https://github.com/HeronSky/Saturn" target="_blank" data-zh="GitHub 專案" data-en="GitHub Project">GitHub 專案</a>
     </div>
@@ -130,23 +245,31 @@
         <h1 data-zh="Saturn 行星高度變化圖表" data-en="Saturn Planet Altitude Chart">Saturn 行星高度變化圖表</h1>
 
         <div class="form-group">
-            <label data-zh="選擇天體:" data-en="Select Planets:">選擇天體:</label>
-            <div class="checkbox-group">
-                <label><input type="checkbox" name="body" value="mercury" data-zh="水星" data-en="Mercury"> <span data-zh="水星" data-en="Mercury">水星</span></label>
-                <label><input type="checkbox" name="body" value="venus" data-zh="金星" data-en="Venus"> <span data-zh="金星" data-en="Venus">金星</span></label>
-                <label><input type="checkbox" name="body" value="mars" data-zh="火星" data-en="Mars"> <span data-zh="火星" data-en="Mars">火星</span></label>
-                <label><input type="checkbox" name="body" value="jupiter" data-zh="木星" data-en="Jupiter"> <span data-zh="木星" data-en="Jupiter">木星</span></label>
-                <label><input type="checkbox" name="body" value="saturn" data-zh="土星" data-en="Saturn"> <span data-zh="土星" data-en="Saturn">土星</span></label>
-                <label><input type="checkbox" name="body" value="uranus" data-zh="天王星" data-en="Uranus"> <span data-zh="天王星" data-en="Uranus">天王星</span></label>
-                <label><input type="checkbox" name="body" value="neptune" data-zh="海王星" data-en="Neptune"> <span data-zh="海王星" data-en="Neptune">海王星</span></label>
-                <label><input type="checkbox" name="body" value="moon" data-zh="月球" data-en="Moon"> <span data-zh="月球" data-en="Moon">月球</span></label>
-                <label><input type="checkbox" name="body" value="sun" data-zh="太陽" data-en="Sun"> <span data-zh="太陽" data-en="Sun">太陽</span></label>
+            <h2 class="checkboxes-title" data-zh="選擇天體" data-en="Select Celestial Bodies">選擇天體</h2>
+            <div class="checkbox-group" id="checkbox-group">
+                <!-- 動態生成的複選框將插入在此處 -->
+            </div>
+            <div class="pagination" id="pagination">
+                <!-- 分頁按鈕將插入在此處 -->
+            </div>
+        </div>
+
+        <!-- 已選擇的天體 -->
+        <div class="form-group selected-bodies-container">
+            <div class="selected-bodies-title" data-zh="已選擇的天體" data-en="Selected Bodies">已選擇的天體</div>
+            <div class="selected-bodies" id="selected-bodies">
+                <!-- 已選擇的天體將顯示在此處 -->
             </div>
         </div>
 
         <div class="form-group">
             <label for="hours" data-zh="時間範圍（小時）:" data-en="Time Range (Hours):">時間範圍（小時）:</label>
             <input type="number" id="hours" name="hours" min="1" max="24" value="8">
+        </div>
+
+        <div class="form-group">
+            <label for="start-time" data-zh="開始時間:" data-en="Start Time:">開始時間:</label>
+            <input type="datetime-local" id="start-time" name="start-time" required>
         </div>
 
         <div class="form-group">
@@ -171,12 +294,159 @@
 
     <script>
         let currentLanguage = 'zh';
+        let selectedBodiesSet = new Set();
+        let currentPage = 1;
+        const itemsPerPage = 9;
+        let totalPages = 1;
+        let allBodies = [];
 
         function changeLanguage(lang) {
             currentLanguage = lang;
             document.querySelectorAll('[data-zh][data-en]').forEach(el => {
                 el.textContent = el.getAttribute(`data-${lang}`);
             });
+            updateDarkModeButtonText();
+            renderCheckboxes();
+            renderPagination();
+            updateSelectedBodiesList();
+        }
+
+        async function loadBodies() {
+            try {
+                const response = await fetch('bodies.txt');
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                const text = await response.text();
+                const lines = text.split('\n').map(line => line.trim()).filter(line => line && !line.startsWith('//'));
+
+                let currentCategory = '';
+                allBodies = [];
+                lines.forEach(line => {
+                    if (line.startsWith('Category:')) {
+                        currentCategory = line.replace('Category:', '').trim();
+                    } else {
+                        const [value, zh, en] = line.split(',').map(part => part.trim());
+                        allBodies.push({ value, zh, en, category: currentCategory });
+                    }
+                });
+
+                totalPages = Math.ceil(allBodies.length / itemsPerPage);
+                currentPage = 1;
+                renderCheckboxes();
+                renderPagination();
+            } catch (error) {
+                console.error('Error loading bodies.txt:', error);
+                showError(currentLanguage === 'zh' ? '無法載入天體資料' : 'Unable to load celestial bodies data');
+            }
+        }
+
+        function renderCheckboxes() {
+            const checkboxGroup = document.getElementById('checkbox-group');
+            checkboxGroup.innerHTML = ''; // 清空現有內容
+
+            const start = (currentPage - 1) * itemsPerPage;
+            const end = start + itemsPerPage;
+            const currentBodies = allBodies.slice(start, end);
+
+            let lastCategory = '';
+
+            currentBodies.forEach(body => {
+                if (body.category !== lastCategory) { // 顯示分類標題
+                    const categoryTitle = document.createElement('div');
+                    categoryTitle.className = 'category-title';
+                    categoryTitle.textContent = currentLanguage === 'zh' ? body.category : translateCategory(body.category);
+                    checkboxGroup.appendChild(categoryTitle);
+                    lastCategory = body.category;
+                }
+
+                const label = document.createElement('label');
+                label.style.display = 'flex';
+                label.style.alignItems = 'center';
+                label.style.justifyContent = 'center';
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.name = 'body';
+                checkbox.value = body.value;
+                checkbox.setAttribute('data-zh', body.zh);
+                checkbox.setAttribute('data-en', body.en);
+                if (selectedBodiesSet.has(body.value)) {
+                    checkbox.checked = true;
+                }
+
+                checkbox.addEventListener('change', () => {
+                    if (checkbox.checked) {
+                        selectedBodiesSet.add(body.value);
+                    } else {
+                        selectedBodiesSet.delete(body.value);
+                    }
+                    updateSelectedBodiesList();
+                });
+
+                const span = document.createElement('span');
+                span.textContent = currentLanguage === 'zh' ? body.zh : body.en;
+                span.setAttribute('data-zh', body.zh);
+                span.setAttribute('data-en', body.en);
+
+                label.appendChild(checkbox);
+                label.appendChild(span);
+                checkboxGroup.appendChild(label);
+            });
+        }
+
+        function renderPagination() {
+            const pagination = document.getElementById('pagination');
+            pagination.innerHTML = ''; // 清空現有內容
+
+            if (totalPages <= 1) return;
+
+            const prevButton = document.createElement('button');
+            prevButton.textContent = currentLanguage === 'zh' ? '上一頁' : 'Previous';
+            prevButton.disabled = currentPage === 1;
+            prevButton.onclick = () => {
+                if (currentPage > 1) {
+                    currentPage--;
+                    renderCheckboxes();
+                    renderPagination();
+                }
+            };
+            pagination.appendChild(prevButton);
+
+            for (let i = 1; i <= totalPages; i++) {
+                const pageButton = document.createElement('button');
+                pageButton.textContent = i;
+                if (i === currentPage) {
+                    pageButton.classList.add('active');
+                }
+                pageButton.onclick = () => {
+                    currentPage = i;
+                    renderCheckboxes();
+                    renderPagination();
+                };
+                pagination.appendChild(pageButton);
+            }
+
+            const nextButton = document.createElement('button');
+            nextButton.textContent = currentLanguage === 'zh' ? '下一頁' : 'Next';
+            nextButton.disabled = currentPage === totalPages;
+            nextButton.onclick = () => {
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    renderCheckboxes();
+                    renderPagination();
+                }
+            };
+            pagination.appendChild(nextButton);
+        }
+
+        function translateCategory(category) {
+            const translations = {
+                '行星': 'Planets',
+                '星系': 'Galaxies',
+                '星雲': 'Nebulas'
+            };
+            return translations[category] || category;
         }
 
         function showError(message) {
@@ -185,6 +455,112 @@
             errorEl.style.display = 'block';
         }
 
+        function hideError() {
+            const errorEl = document.getElementById('error');
+            errorEl.style.display = 'none';
+        }
+
+        function resetForm() {
+            selectedBodiesSet.clear();
+            updateSelectedBodiesList();
+            hideError();
+            document.getElementById('result').innerHTML = '';
+            document.getElementById('download-btn').style.display = 'none';
+            loadBodies();
+        }
+
+        // 更新已選擇的天體列表
+        function updateSelectedBodiesList() {
+            const container = document.getElementById('selected-bodies');
+            container.innerHTML = '';
+            selectedBodiesSet.forEach(body => {
+                const div = document.createElement('div');
+                div.className = 'body-item';
+                div.textContent = getPlanetName(body);
+                div.onclick = () => {
+                    selectedBodiesSet.delete(body);
+                    updateSelectedBodiesList();
+                    // 取消對應的checkbox選中狀態
+                    const checkbox = document.querySelector(`input[value="${body}"]`);
+                    if (checkbox) checkbox.checked = false;
+                };
+                container.appendChild(div);
+            });
+        }
+
+        // 修正後的取得天體名稱根據當前語言
+        function getPlanetName(bodyValue) {
+            const body = allBodies.find(b => b.value === bodyValue);
+            if (!body) return bodyValue;
+            return currentLanguage === 'zh' ? body.zh : body.en;
+        }
+
+        // 處理表單提交
+        function generateChart() {
+            const errorEl = document.getElementById('error');
+            const resultEl = document.getElementById('result');
+            const loadingEl = document.getElementById('loading');
+            const downloadBtn = document.getElementById('download-btn');
+            errorEl.style.display = 'none';
+            resultEl.innerHTML = '';
+            loadingEl.style.display = 'block';
+            downloadBtn.style.display = 'none';
+
+            const selectedBodies = Array.from(selectedBodiesSet);
+            const hours = document.getElementById('hours').value;
+            const startTime = document.getElementById('start-time').value;
+            const latitude = document.getElementById('latitude').value;
+            const longitude = document.getElementById('longitude').value;
+
+            if (selectedBodies.length === 0) {
+                loadingEl.style.display = 'none';
+                showError(currentLanguage === 'zh' ? '請至少選擇一個天體' : 'Please select at least one celestial body');
+                return;
+            }
+
+            if (!latitude || !longitude) {
+                loadingEl.style.display = 'none';
+                showError(currentLanguage === 'zh' ? '請輸入緯度和經度' : 'Please enter latitude and longitude');
+                return;
+            }
+
+            axios.post('http://37.27.51.34:9862/generate_plot', {
+                bodies: selectedBodies,
+                hours: hours,
+                start_time: startTime,
+                latitude: latitude,
+                longitude: longitude,
+                quality: 'high' // 傳遞圖片品質參數給後端
+            })
+            .then(response => {
+                loadingEl.style.display = 'none';
+                // 修改此處以匹配後端返回的鍵名
+                if (response.data.image_base64) {
+                    const img = new Image();
+                    img.src = 'data:image/png;base64,' + response.data.image_base64;
+                    img.alt = currentLanguage === 'zh' ? '天體高度變化圖表' : 'Planet Altitude Chart';
+                    img.style.imageRendering = 'auto'; // 確保圖片以最佳品質渲染
+                    resultEl.innerHTML = '';
+                    resultEl.appendChild(img);
+
+                    downloadBtn.style.display = 'block';
+                    downloadBtn.onclick = function() {
+                        const link = document.createElement('a');
+                        link.href = img.src;
+                        link.download = 'chart.png';
+                        link.click();
+                    };
+                } else {
+                    showError(currentLanguage === 'zh' ? '生成圖表失敗' : 'Failed to generate plot');
+                }
+            })
+            .catch(error => {
+                loadingEl.style.display = 'none';
+                showError(error.response?.data?.message || (currentLanguage === 'zh' ? '發生未知錯誤' : 'An unknown error occurred'));
+            });
+        }
+
+        // 取得當前位置
         function getCurrentLocation() {
             const latInput = document.getElementById('latitude');
             const lonInput = document.getElementById('longitude');
@@ -213,80 +589,61 @@
                         default:
                             errorMessage += currentLanguage === 'zh' ? '未知錯誤' : 'Unknown error';
                     }
-                    
+
                     errorEl.textContent = errorMessage;
                     errorEl.style.display = 'block';
                 }
             );
         }
 
-        function generateChart() {
-            const errorEl = document.getElementById('error');
-            const resultEl = document.getElementById('result');
-            const loadingEl = document.getElementById('loading');
-            const downloadBtn = document.getElementById('download-btn');
-            errorEl.style.display = 'none';
-            resultEl.innerHTML = '';
-            loadingEl.style.display = 'block';
-            downloadBtn.style.display = 'none';
-
-            const selectedBodies = Array.from(
-                document.querySelectorAll('input[name="body"]:checked')
-            ).map(el => el.value);
-
-            const hours = document.getElementById('hours').value;
-            const latitude = document.getElementById('latitude').value;
-            const longitude = document.getElementById('longitude').value;
-
-            if (selectedBodies.length === 0) {
-                loadingEl.style.display = 'none';
-                showError(currentLanguage === 'zh' ? '請至少選擇一個天體' : 'Please select at least one planet');
-                return;
-            }
-
-            if (!latitude || !longitude) {
-                loadingEl.style.display = 'none';
-                showError(currentLanguage === 'zh' ? '請輸入緯度和經度' : 'Please enter latitude and longitude');
-                return;
-            }
-
-            axios.post('https://saturn-huk9.onrender.com/celestial-chart', {
-                bodies: selectedBodies,
-                hours: hours,
-                latitude: latitude,
-                longitude: longitude
-            })
-            .then(response => {
-                loadingEl.style.display = 'none';
-                if (response.data.status === 'success') {
-                    const img = document.createElement('img');
-                    img.src = 'data:image/png;base64,' + response.data.image_base64;
-                    img.alt = currentLanguage === 'zh' ? '天體高度變化圖表' : 'Planet Altitude Chart';
-                    resultEl.innerHTML = '';
-                    resultEl.appendChild(img);
-
-                    downloadBtn.style.display = 'block';
-                    downloadBtn.onclick = function() {
-                        const link = document.createElement('a');
-                        link.href = img.src;
-                        link.download = 'chart.png';
-                        link.click();
-                    };
-                } else {
-                    showError(response.data.message);
-                }
-            })
-            .catch(error => {
-                loadingEl.style.display = 'none';
-                showError(error.response?.data?.message || (currentLanguage === 'zh' ? '發生未知錯誤' : 'An unknown error occurred'));
-            });
+        // 切換深色模式
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            updateDarkModeButtonText();
+            // 當切換主題時，重新渲染選擇的天體列表和分頁按鈕以應用新樣式
+            renderCheckboxes();
+            renderPagination();
+            updateSelectedBodiesList();
         }
 
-        window.onload = function() {
+        // 更新深色模式按鈕文字
+        function updateDarkModeButtonText() {
+            const toggleButton = document.getElementById('toggle-dark-mode');
+            toggleButton.textContent = document.body.classList.contains('dark-mode') ? 
+                (currentLanguage === 'zh' ? '淺色模式' : 'Light Mode') : 
+                (currentLanguage === 'zh' ? '深色模式' : 'Dark Mode');
+        }
+
+        // 下載圖片
+        function downloadImage() {
+            const img = document.querySelector('#result img');
+            if (img) {
+                const link = document.createElement('a');
+                link.href = img.src;
+                link.download = 'chart.png';
+                link.click();
+            }
+        }
+
+        // 初始化
+        window.onload = async function() {
             const locationBtn = document.getElementById('location-btn');
             if (!navigator.geolocation) {
                 locationBtn.style.display = 'none';
             }
+            await loadBodies();
+            updateDarkModeButtonText();
+
+            // 設定開始時間預設值為當地時間
+            const startTimeInput = document.getElementById('start-time');
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const localDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
+            startTimeInput.value = localDateTime;
         };
     </script>
 </body>
