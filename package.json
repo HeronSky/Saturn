@@ -1,4 +1,15 @@
 {
+  "name": "saturn",
+  "version": "1.0.0",
+  "description": "Saturn 行星高度變化圖表專案",
+  "homepage": "https://HeronSky.github.io/Saturn",
+  "main": "index.js",
+  "scripts": {
+    "deploy": "gh-pages -d frontend"
+  },
+  "keywords": [],
+  "author": "HeronSky",
+  "license": "MIT",
   "devDependencies": {
     "gh-pages": "^6.2.0"
   }
