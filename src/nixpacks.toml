@@ -1,0 +1,4 @@
+[phases]
+setup = "python-3.10"  # 指定 Python 版本
+install = "pip install -r requirements.txt"  # 安裝依賴
+start = "gunicorn src.main:app --bind 0.0.0.0:$PORT"  # 啟動 Flask 應用
