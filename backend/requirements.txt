@@ -8,3 +8,4 @@ pytz
 APScheduler
 flask_caching
 astroquery
+gunicorn
