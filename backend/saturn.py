@@ -23,7 +23,7 @@ from zoneinfo import ZoneInfo
 app = Flask(__name__)
 CORS(app)
 
-plt.rcParams['figure.dpi'] = 1000
+plt.rcParams['figure.dpi'] = 96
 
 # 設定日誌級別
 logging.basicConfig(level=logging.INFO)
